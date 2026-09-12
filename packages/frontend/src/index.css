@@ -617,6 +617,7 @@ svg {
   font-family: "Times New Roman", serif;
   font-size: 12px;
   color: hsl(var(--foreground));
+  overflow: auto;
   overflow-wrap: anywhere;
 }
 .sheet-addressee {
