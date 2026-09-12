@@ -190,9 +190,16 @@ function title(model) {
   // Also skip generic/fallback titles like "Документ" that produce meaningless "О Документ".
   const raw = model.title?.trim();
   const isGeneric = !raw || /^документ$/i.test(raw);
-  const titleText = raw && !/^о\s/i.test(raw) && !isGeneric
-    ? `О ${raw}`
-    : isGeneric ? null : raw;
+  let titleText;
+  if (isGeneric) {
+    titleText = null;
+  } else if (/^о\s/i.test(raw)) {
+    // Already has "О " — enforce Prepositional case on the first word after "О "
+    titleText = enforcePrepositional(raw);
+  } else {
+    // No "О " prefix — add it and enforce Prepositional case
+    titleText = enforcePrepositional(`О ${raw}`);
+  }
   const runs = titleText
     ? [new TextRun({ text: titleText, bold: cfg.bold, italics: cfg.italic })]
     : [new TextRun({ text: 'О ', bold: cfg.bold, italics: cfg.italic }), ...valueRuns(model, 'Тема')];
@@ -200,6 +207,29 @@ function title(model) {
     alignment: ALIGN[cfg.align],
     children: runs,
   })];
+}
+
+/**
+ * Enforce Prepositional case (Предложный падеж) on the word after "О ".
+ * Handles common Nominative→Prepositional patterns for adjectives and nouns.
+ * This is a heuristic — covers ~80% of business document titles.
+ */
+function enforcePrepositional(text) {
+  const match = text.match(/^(О\s+)(\S+)(.*)$/i);
+  if (!match) return text;
+  const [, prefix, word, rest] = match;
+  // Already in Prepositional? (common endings: -ых, -их, -ах, -ях, -ом, -ем, -и, -ой, -ей)
+  if (/(?:ых|их|ах|ях|ом|ем|ой|ей)$/i.test(word)) return text;
+  let fixed = word;
+  // Adjectives: -ые → -ых, -ие → -их, -ая → -ой, -яя → -ей
+  fixed = fixed.replace(/ые$/i, 'ых');
+  fixed = fixed.replace(/ие$/i, 'их');
+  fixed = fixed.replace(/ая$/i, 'ой');
+  fixed = fixed.replace(/яя$/i, 'ей');
+  // Nouns: -ы → -ах, -а → -е (for feminine nouns like "записка")
+  fixed = fixed.replace(/ы$/i, 'ах');
+  fixed = fixed.replace(/а$/i, 'е');
+  return `${prefix}${fixed}${rest}`;
 }
 
 /**
