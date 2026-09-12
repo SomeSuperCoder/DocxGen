@@ -1,6 +1,7 @@
 import { FileText } from "lucide-react";
 import { DOCUMENT_TYPES } from "@/lib/constants";
 import type { DocumentTypeId, Requisites, TemplateId } from "@/types/document";
+import { RichText } from "./RichText";
 
 interface DocumentPreviewProps {
   documentType: DocumentTypeId;
@@ -60,7 +61,7 @@ export function DocumentPreview({
       )}
       {text ? (
         <p className="sheet-body">
-          {text.slice(0, 650)}
+          <RichText text={text} maxLength={650} />
           {text.length > 650 && "…"}
         </p>
       ) : (

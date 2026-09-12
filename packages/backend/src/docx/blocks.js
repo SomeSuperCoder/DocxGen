@@ -1,5 +1,6 @@
 import { Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, UnderlineType } from 'docx';
 import { mm, halfPt } from './units.js';
+import { parseRichText } from './richText.js';
 
 /**
  * @typedef {{
@@ -253,7 +254,7 @@ function body(model) {
     indent: t.paragraph.firstLineIndentMm > 0
       ? { firstLine: mm(t.paragraph.firstLineIndentMm) }
       : undefined,
-    children: [new TextRun(text)],
+    children: parseRichText(text),
   }));
 }
 
