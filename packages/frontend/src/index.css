@@ -639,6 +639,8 @@ svg {
   font-size: 12px;
   line-height: 1.7;
   white-space: pre-line;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .sheet-signature {
   display: flex;
@@ -860,10 +862,12 @@ svg {
 }
 .workspace-editor {
   min-width: 0;
+  overflow: hidden;
 }
 .workspace-sidebar {
   position: sticky;
   top: 110px;
+  overflow: hidden;
   border: 1px solid hsl(var(--border));
   background: hsl(var(--secondary) / 0.5);
   border-radius: 16px;
