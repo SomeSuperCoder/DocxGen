@@ -986,6 +986,10 @@ svg {
   line-height: 1.95 !important;
   resize: vertical;
 }
+.editor-textarea:focus-visible {
+  outline: none;
+  outline-offset: 0;
+}
 .editor-textarea::placeholder {
   color: hsl(var(--muted-foreground));
 }
