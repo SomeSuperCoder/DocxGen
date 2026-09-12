@@ -13,7 +13,7 @@ const TEMPLATES_DIR = path.join(ROOT, 'config', 'templates');
 // ── Doc type schema validation ───────────────────────────────────────────────
 
 describe('DocTypeSchema', () => {
-  const files = ['memo.json', 'report.json', 'reference.json', 'letter.json'];
+  const files = ['memo.json', 'report.json', 'reference.json', 'letter.json', 'explanatory-note.json'];
 
   for (const file of files) {
     it(`validates ${file}`, () => {
@@ -49,9 +49,9 @@ describe('loadDocTypes', () => {
 
   it('returns a Map with correct IDs', () => {
     const list = catalog.list();
-    expect(list.length).toBe(4);
+    expect(list.length).toBe(5);
     const ids = list.map((d) => d.id).sort();
-    expect(ids).toEqual(['letter', 'memo', 'reference', 'report']);
+    expect(ids).toEqual(['explanatory-note', 'letter', 'memo', 'reference', 'report']);
   });
 
   it('get() returns the correct doc type', () => {

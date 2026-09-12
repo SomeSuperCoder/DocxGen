@@ -3,7 +3,7 @@
   "name": "Письмо",
   "hint": "Официальное письмо организации: обращение, повод, суть, просьба",
   "docTitle": null,
-  "layout": ["orgHeader", "dateNumber", "addressee", "title", "salutation", "body", "signature", "executor"],
+  "layout": ["orgHeader", ["dateNumber", "Исх."], "addressee", "title", "salutation", "body", "signature", "copyBlock", "executor"],
   "structureHint": "Обращение → повод → суть → просьба или вывод. salutation формируется только при наличии имени и отчества адресата.",
   "fields": [
     { "key": "Организация адресата", "label": "Организация адресата", "kind": "extract", "required": true,

@@ -13,6 +13,7 @@ export const DOCUMENT_TYPES: Array<{
   { id: 'report', label: 'Докладная записка', description: 'Формальный отчёт' },
   { id: 'reference', label: 'Информационная справка', description: 'Справка с фактами' },
   { id: 'letter', label: 'Письмо', description: 'Внешняя корреспонденция' },
+  { id: 'explanatory-note', label: 'Пояснительная записка', description: 'Пояснение к проекту документа' },
 ];
 
 

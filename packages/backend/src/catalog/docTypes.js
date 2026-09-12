@@ -18,7 +18,7 @@ export const DocTypeSchema = z.object({
   name: z.string().min(1),
   hint: z.string().min(1),
   docTitle: z.string().nullable(),
-  layout: z.array(z.string()),
+  layout: z.array(z.union([z.string(), z.array(z.string())])),
   structureHint: z.string().min(1),
   fields: z.array(FieldSchema),
 });

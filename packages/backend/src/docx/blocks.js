@@ -187,9 +187,12 @@ function dateNumber(model, prefix = '№') {
 function title(model) {
   const cfg = model.template.blocks.title;
   // Some providers (mock) already return a title prefixed with "О " — do not double it.
-  const titleText = model.title && !/^о\s/i.test(model.title.trim())
-    ? `О ${model.title}`
-    : model.title;
+  // Also skip generic/fallback titles like "Документ" that produce meaningless "О Документ".
+  const raw = model.title?.trim();
+  const isGeneric = !raw || /^документ$/i.test(raw);
+  const titleText = raw && !/^о\s/i.test(raw) && !isGeneric
+    ? `О ${raw}`
+    : isGeneric ? null : raw;
   const runs = titleText
     ? [new TextRun({ text: titleText, bold: cfg.bold, italics: cfg.italic })]
     : [new TextRun({ text: 'О ', bold: cfg.bold, italics: cfg.italic }), ...valueRuns(model, 'Тема')];
@@ -473,143 +476,47 @@ function noBorders() {
   return { top: b, bottom: b, left: b, right: b };
 }
 
-// ── Layout builders ─────────────────────────────────────────────────────────
+// ── Layout builder ─────────────────────────────────────────────────────────
 
 /**
- * Layout builders — one per template+docType combination.
- * Each builder calls the block functions in the correct order for its combo.
+ * Generic layout builder — reads the block sequence from docType.layout
+ * and calls each block function in order.
+ *
+ * Layout entries can be:
+ *   - A string: "blockName" → calls BLOCKS[blockName](model)
+ *   - An array: ["blockName", arg1, ...] → calls BLOCKS[blockName](model, arg1, ...)
+ *
+ * This keeps layout ordering in the docType JSON config — adding a new doc type
+ * requires ONLY a JSON config file, no new layout functions.
+ *
  * Block functions read their own config from model.template.blocks.*,
- * so layout builders only need to specify the sequence.
+ * so the builder only specifies the sequence and optional extra arguments.
+ *
+ * @param {RenderModel} model
+ * @returns {(Paragraph|Table)[]}
  */
+function buildLayout(model) {
+  const layoutConfig = model.docType.layout;
+  if (!layoutConfig || !Array.isArray(layoutConfig)) {
+    throw new Error(`docType=${model.docType.id} has no layout array`);
+  }
 
-/** classic + memo: orgHeader → addressee → docTitle → dateNumber → approval → agreement → title → body → attachment → signature */
-function classicMemoLayout(model) {
-  return [
-    ...orgHeader(model),
-    ...addressee(model),
-    ...docTitle(model),
-    ...dateNumber(model),
-    ...approvalBlock(model),
-    ...agreementBlock(model),
-    ...title(model),
-    ...body(model),
-    ...attachmentBlock(model),
-    ...signature(model),
-  ];
+  const elements = [];
+
+  for (const entry of layoutConfig) {
+    // Normalize: string → [name], array → [name, ...args]
+    const [blockName, ...args] = Array.isArray(entry) ? entry : [entry];
+    const blockFn = BLOCKS[blockName];
+
+    if (!blockFn) {
+      throw new Error(`Unknown block "${blockName}" in layout for docType=${model.docType.id}`);
+    }
+
+    elements.push(...blockFn(model, ...args));
+  }
+
+  return elements;
 }
-
-/** classic + report: orgHeader → addressee → docTitle → dateNumber → approval → agreement → title → body → attachment → signature */
-function classicReportLayout(model) {
-  return [
-    ...orgHeader(model),
-    ...addressee(model),
-    ...docTitle(model),
-    ...dateNumber(model),
-    ...approvalBlock(model),
-    ...agreementBlock(model),
-    ...title(model),
-    ...body(model),
-    ...attachmentBlock(model),
-    ...signature(model),
-  ];
-}
-
-/** classic + reference: orgHeader → docTitle → dateNumber → title → body → signature */
-function classicReferenceLayout(model) {
-  return [
-    ...orgHeader(model),
-    ...docTitle(model),
-    ...dateNumber(model),
-    ...title(model),
-    ...body(model),
-    ...signature(model),
-  ];
-}
-
-/** classic + letter: orgHeader → dateNumber("Исх.") → addressee → title → salutation → body → signature → copy → executor */
-function classicLetterLayout(model) {
-  return [
-    ...orgHeader(model),
-    ...dateNumber(model, 'Исх.'),
-    ...addressee(model),
-    ...title(model),
-    ...salutation(model),
-    ...body(model),
-    ...signature(model),
-    ...copyBlock(model),
-    ...executor(model),
-  ];
-}
-
-/** modern + memo: addressee → docTitle → dateNumber → approval → agreement → title → body → attachment → signature */
-function modernMemoLayout(model) {
-  return [
-    ...addressee(model),
-    ...docTitle(model),
-    ...dateNumber(model),
-    ...approvalBlock(model),
-    ...agreementBlock(model),
-    ...title(model),
-    ...body(model),
-    ...attachmentBlock(model),
-    ...signature(model),
-  ];
-}
-
-/** modern + report: addressee → docTitle → dateNumber → approval → agreement → title → body → attachment → signature */
-function modernReportLayout(model) {
-  return [
-    ...addressee(model),
-    ...docTitle(model),
-    ...dateNumber(model),
-    ...approvalBlock(model),
-    ...agreementBlock(model),
-    ...title(model),
-    ...body(model),
-    ...attachmentBlock(model),
-    ...signature(model),
-  ];
-}
-
-/** modern + reference: docTitle → dateNumber → title → body → signature */
-function modernReferenceLayout(model) {
-  return [
-    ...docTitle(model),
-    ...dateNumber(model),
-    ...title(model),
-    ...body(model),
-    ...signature(model),
-  ];
-}
-
-/** modern + letter: dateNumber("Исх.") → addressee → title → salutation → body → signature → copy → executor */
-function modernLetterLayout(model) {
-  return [
-    ...dateNumber(model, 'Исх.'),
-    ...addressee(model),
-    ...title(model),
-    ...salutation(model),
-    ...body(model),
-    ...signature(model),
-    ...copyBlock(model),
-    ...executor(model),
-  ];
-}
-
-/**
- * Registry of layout builders, keyed by "templateId:docTypeId".
- * @type {Record<string, (model: RenderModel) => (Paragraph|Table)[]>}
- */
-const LAYOUTS = {
-  'classic:memo': classicMemoLayout,
-  'classic:report': classicReportLayout,
-  'classic:reference': classicReferenceLayout,
-  'classic:letter': classicLetterLayout,
-  'modern:memo': modernMemoLayout,
-  'modern:report': modernReportLayout,
-  'modern:reference': modernReferenceLayout,
-  'modern:letter': modernLetterLayout,
-};
 
 // ── Export ──────────────────────────────────────────────────────────────────
 
@@ -617,25 +524,21 @@ const LAYOUTS = {
  * Main entry point — generates the full document layout for a given
  * template+docType combination with [Label] placeholders.
  *
+ * Layout sequence is read from docType.layout JSON array.
+ *
  * @param {RenderModel} model
  * @returns {(Paragraph|Table)[]}
  */
 export function construct(model) {
-  const key = `${model.template.id}:${model.docType.id}`;
-  const layout = LAYOUTS[key];
-  if (!layout) {
-    throw new Error(`No layout defined for template=${model.template.id} docType=${model.docType.id}`);
-  }
-  return layout(model);
+  return buildLayout(model);
 }
 
 /**
- * Registry of block functions, keyed by layout name.
- * Each function receives the full RenderModel and returns (Paragraph|Table)[].
+ * Registry of block functions, keyed by block name.
+ * Each function receives the full RenderModel (and optional extra args)
+ * and returns (Paragraph|Table)[].
  *
- * Kept for backward compatibility with render.js (docType.layout iteration).
- *
- * @type {Record<string, (model: RenderModel) => (Paragraph|Table)[]>}
+ * @type {Record<string, (model: RenderModel, ...args: any[]) => (Paragraph|Table)[]>}
  */
 export const BLOCKS = {
   orgHeader,

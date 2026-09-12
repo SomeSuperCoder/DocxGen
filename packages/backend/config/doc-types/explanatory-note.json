@@ -1,0 +1,20 @@
+{
+  "id": "explanatory-note",
+  "name": "Пояснительная записка",
+  "hint": "Пояснение к проекту, отчёту или документу: описание цели, методов, результатов",
+  "docTitle": "ПОЯСНИТЕЛЬНАЯ ЗАПИСКА",
+  "layout": ["orgHeader", "docTitle", "title", "body", "signature"],
+  "structureHint": "Цель документа → описание содержания → результаты или выводы. Каждый раздел — отдельный абзац.",
+  "fields": [
+    { "key": "Адресат", "label": "Адресат", "kind": "extract", "required": true,
+      "question": "Кому адресована записка? Укажите должность и ФИО.",
+      "example": "Генеральному директору Иванову И. И." },
+    { "key": "Должность автора", "label": "Должность автора", "kind": "extract", "required": true,
+      "question": "Ваша должность и подразделение?", "example": "Ведущий инженер отдела разработки" },
+    { "key": "ФИО автора", "label": "ФИО автора", "kind": "extract", "required": true,
+      "question": "Ваши фамилия и инициалы?", "example": "Сидоров П. П." },
+    { "key": "Тема", "label": "Тема", "kind": "derived", "required": true },
+    { "key": "Дата", "label": "Дата", "kind": "auto", "required": true },
+    { "key": "Номер", "label": "Номер", "kind": "registry", "required": false }
+  ]
+}

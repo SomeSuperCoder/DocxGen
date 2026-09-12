@@ -38,10 +38,8 @@ export const RequisitesForm = memo(function RequisitesForm({
     <div className="grid grid-cols-1 gap-x-10 gap-y-2 md:grid-cols-2">
       {visibleFields.map((field) => {
         const empty = !requisites[field.key];
-        const isEditable = field.kind === 'extract';
-        const placeholder = field.example
-          ? `[${field.example}]`
-          : `[${field.label}]`;
+        const isEditable = field.kind === 'extract' || field.kind === 'derived';
+        const placeholder = field.example || field.label;
 
         return (
           <label key={field.key} className="block pt-3.5">

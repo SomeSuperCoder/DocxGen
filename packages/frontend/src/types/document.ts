@@ -3,7 +3,7 @@
  * Used by Redux store, components, and API utilities.
  */
 
-export type DocumentTypeId = 'memo' | 'report' | 'reference' | 'letter';
+export type DocumentTypeId = 'memo' | 'report' | 'reference' | 'letter' | 'explanatory-note';
 
 export type TemplateId = 'classic' | 'modern';
 
