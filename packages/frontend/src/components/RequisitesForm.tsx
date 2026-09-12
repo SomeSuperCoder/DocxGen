@@ -9,11 +9,7 @@ interface RequisitesFormProps {
   disabled: boolean;
 }
 
-/**
- * Поля на подчёркиваниях: реквизиты читаются как строчки документа, а не как
- * анкета из коробок. Пустое поле подчёркнуто охрой — тем же цветом, каким
- * пометка потом выделяется в DOCX.
- */
+/** Empty fields use the same highlight color as placeholders in the preview. */
 export const RequisitesForm = memo(function RequisitesForm({
   docTypeFields,
   requisites,

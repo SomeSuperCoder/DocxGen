@@ -1,60 +1,125 @@
-import { memo } from 'react';
-import { Button } from '@/components/ui/button';
+import { memo, useRef, useState } from "react";
+import { ArrowLeft, ArrowUpRight, Menu, Moon, Sun, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "@/lib/useTheme";
 
 interface SiteHeaderProps {
-  variant: 'landing' | 'app';
+  variant: "landing" | "app";
   onStart: () => void;
   onHome: () => void;
 }
-
 const NAV = [
-  { href: '#how', label: 'Как это работает' },
-  { href: '#types', label: 'Типы документов' },
-  { href: '#bots', label: 'Боты' },
+  { href: "#how", label: "Как это работает" },
+  { href: "#types", label: "Типы документов" },
+  { href: "#bots", label: "Боты" },
 ];
 
-/**
- * Общая шапка обеих страниц. На лендинге — навигация по якорям и призыв,
- * в форме она сжимается до названия и выхода на главную, чтобы не спорить
- * с заголовком страницы.
- */
-export const SiteHeader = memo(function SiteHeader({ variant, onStart, onHome }: SiteHeaderProps) {
-  const isLanding = variant === 'landing';
-
+export const SiteHeader = memo(function SiteHeader({
+  variant,
+  onStart,
+  onHome,
+}: SiteHeaderProps) {
+  const isLanding = variant === "landing";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const { theme, toggleTheme } = useTheme();
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-[1136px] items-center justify-between gap-8 px-5 py-4 sm:px-12">
+    <header
+      className="site-header"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && menuOpen) {
+          setMenuOpen(false);
+          menuButton.current?.focus();
+        }
+      }}
+    >
+      <div className="site-container header-inner">
         <button
           type="button"
-          onClick={onHome}
-          className="flex items-baseline gap-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          onClick={() => {
+            setMenuOpen(false);
+            onHome();
+          }}
+          className="brand"
+          aria-label="DocxGen, на главную"
         >
-          <span className="font-display text-2xl font-medium">DocxGen</span>
-          <span className="label-caps hidden tracking-[0.18em] text-muted-foreground/70 sm:block">
-            Документ за три шага
-          </span>
+          <span className="brand-wordmark">DocxGen</span>
+          <span className="brand-description">Документ за три шага</span>
         </button>
-
         {isLanding && (
-          <nav className="hidden items-center gap-8 lg:flex">
+          <nav className="desktop-nav" aria-label="Основная навигация">
             {NAV.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="text-[15px] text-secondary-foreground transition-colors hover:text-primary hover:underline hover:underline-offset-4"
-              >
+              <a key={item.href} href={item.href}>
                 {item.label}
               </a>
             ))}
           </nav>
         )}
-
-        {isLanding ? (
-          <Button size="sm" onClick={onStart}>Открыть</Button>
-        ) : (
-          <Button variant="link" size="bare" onClick={onHome}>На главную</Button>
-        )}
+        <div className="header-actions">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label={
+              theme === "light"
+                ? "Включить тёмную тему"
+                : "Включить светлую тему"
+            }
+            title={theme === "light" ? "Тёмная тема" : "Светлая тема"}
+          >
+            {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+          </Button>
+          {isLanding ? (
+            <Button
+              className="header-open-button"
+              size="sm"
+              onClick={() => {
+                setMenuOpen(false);
+                onStart();
+              }}
+            >
+              Открыть <ArrowUpRight size={16} aria-hidden="true" />
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={onHome} aria-label="На главную">
+              <ArrowLeft size={16} aria-hidden="true" />
+              <span className="home-label">На главную</span>
+            </Button>
+          )}
+          {isLanding && (
+            <Button
+              ref={menuButton}
+              className="mobile-menu-toggle"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label={menuOpen ? "Закрыть меню" : "Открыть меню"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-navigation"
+            >
+              {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            </Button>
+          )}
+        </div>
       </div>
+      {isLanding && menuOpen && (
+        <nav
+          id="mobile-navigation"
+          className="mobile-nav site-container"
+          aria-label="Мобильная навигация"
+        >
+          {NAV.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={() => setMenuOpen(false)}
+            >
+              {item.label}
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </a>
+          ))}
+        </nav>
+      )}
     </header>
   );
 });

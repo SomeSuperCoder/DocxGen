@@ -1,233 +1,340 @@
-import { memo } from 'react';
-import { ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { DOCUMENT_TYPES, TEMPLATES } from '@/lib/constants';
+import { memo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  CheckCheck,
+  Download,
+  FileCheck2,
+  FileText,
+  Globe2,
+  ListChecks,
+  MessageCircle,
+  PenLine,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DOCUMENT_TYPES, TEMPLATES } from "@/lib/constants";
+import { DOCUMENT_EXAMPLES } from "@/lib/examples";
+import type { DocumentTypeId, TemplateId } from "@/types/document";
+import { DocumentArtwork } from "./DocumentArtwork";
+import { DocumentPreview } from "./DocumentPreview";
+import { Reveal } from "./Reveal";
 
 interface LandingProps {
   onStart: () => void;
 }
-
 const STEPS = [
   {
-    num: '01',
-    title: 'Черновик',
-    text: 'Вставьте текст и выберите тип документа и шаблон оформления. Правки не нужны — для этого всё и затевалось.',
+    icon: PenLine,
+    title: "Добавьте черновик",
+    text: "Вставьте текст как есть. Выберите тип документа и оформление.",
   },
   {
-    num: '02',
-    title: 'Проверка',
-    text: 'Исправленный текст и разобранные реквизиты открыты для правки. Чего ИИ не нашёл — допишете сами или оставите пометку.',
+    icon: ListChecks,
+    title: "Проверьте результат",
+    text: "Отредактируйте исправленный текст и дополните реквизиты.",
   },
   {
-    num: '03',
-    title: 'Файл',
-    text: 'DOCX скачивается и открывается в Word как обычный документ — не картинка и не PDF, всё правится дальше.',
+    icon: Download,
+    title: "Скачайте документ",
+    text: "Получите DOCX, который можно дальше редактировать в Word.",
   },
 ];
 
-const CHANNELS = [
-  { title: 'Браузер', text: 'Полная форма: текст, реквизиты и предпросмотр шаблона на одном экране.' },
-  { title: 'MAX', text: 'Тот же диалог в мессенджере: прислали черновик — получили файл в переписку.' },
-  { title: 'ВКонтакте', text: 'Бот сообщества с теми же шагами и тем же результатом.' },
-];
-
-const DRAFT_SAMPLE =
-  'прошу выделить средства на закупку 5 мониторов для отдела разработки. текущие мониторы 2016 года, у трех из них битые пиксели и мерцание. директору иванову и.и. от петрова п.п.';
-
-const CORRECTED_SAMPLE =
-  'Прошу выделить средства на закупку пяти мониторов для отдела разработки. Используемые мониторы выпущены в 2016 году; у трёх из них выявлены битые пиксели и мерцание изображения.';
-
-const Section = ({ id, children }: { id?: string; children: React.ReactNode }) => (
-  <section id={id} className="mx-auto max-w-[1136px] scroll-mt-20 px-5 pt-22 sm:px-12">
-    {children}
-  </section>
-);
-
-const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <span className="label-caps tracking-[0.16em]">{children}</span>
-);
-
-/**
- * Главная страница. Списки типов и шаблонов берутся из того же каталога,
- * что и форма, — иначе витрина и продукт разъезжаются при первом же изменении.
- */
 export const Landing = memo(function Landing({ onStart }: LandingProps) {
+  const reduced = useReducedMotion();
+  const [exampleType, setExampleType] = useState<DocumentTypeId>("memo");
+  const [previewTemplate, setPreviewTemplate] = useState<TemplateId>("classic");
+  const example = DOCUMENT_EXAMPLES[exampleType];
   return (
-    <div className="pb-4">
-      <Section>
-        <div className="grid grid-cols-1 items-start gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-18">
-          <div>
-            <SectionLabel>Служебные документы</SectionLabel>
-            <h1 className="mt-5 font-display text-6xl leading-[0.98] font-medium tracking-tight sm:text-[84px]">
-              Из черновика
-              <br />— в документ
-            </h1>
-            <p className="mt-6 max-w-[520px] text-lg leading-[30px] text-muted-foreground text-pretty">
-              Вставьте текст как есть — со строчных, без запятых, обрывками. Получите оформленный DOCX:
-              с реквизитами, по ГОСТовской структуре, редактируемый в Word.
-            </p>
-            <div className="mt-9">
-              <Button onClick={onStart}>Вставить черновик</Button>
-            </div>
-            <p className="mt-5 text-sm text-muted-foreground">
-              Без регистрации. Файл хранится сутки и удаляется.
-            </p>
+    <main id="main-content" tabIndex={-1} className="landing">
+      <section className="site-container hero-section">
+        <Reveal className="hero-copy">
+          <div className="hero-eyebrow">
+            <PenLine size={14} strokeWidth={1.7} aria-hidden="true" />
+            Служебные документы, без рутины
           </div>
-
-          <Card className="px-10 py-9">
-            <div className="text-right text-[13px] leading-[21px] text-secondary-foreground">
-              Директору
-              <br />
-              Иванову И. И.
-            </div>
-            <p className="mt-7 text-center font-display text-[22px] font-medium">Служебная записка</p>
-            <div className="mt-6 flex flex-col gap-2.5" aria-hidden="true">
-              {['100%', '96%', '99%', '62%'].map((w, i) => (
-                <div key={i} className="h-[7px] rounded-xs bg-border" style={{ width: w }} />
-              ))}
-            </div>
-            <div className="mt-5 flex flex-col gap-2.5" aria-hidden="true">
-              {['98%', '93%', '78%'].map((w, i) => (
-                <div key={i} className="h-[7px] rounded-xs bg-border" style={{ width: w }} />
-              ))}
-            </div>
-            <div className="mt-6 flex items-center gap-2.5">
-              <span className="bg-highlight px-2.5 py-0.5 text-xs text-highlight-foreground">[Номер]</span>
-              <span className="text-xs text-muted-foreground">незаполненное видно сразу</span>
-            </div>
-            <div className="mt-7 flex items-baseline justify-between border-t border-border pt-5">
-              <span className="text-[13px] text-secondary-foreground">Петров П. П.</span>
-              <span className="text-[13px] text-muted-foreground">10.09.2026</span>
-            </div>
-          </Card>
-        </div>
-      </Section>
-
-      <Section>
-        <SectionLabel>Было — стало</SectionLabel>
-        <div className="mt-7 grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_56px_1fr] md:gap-0">
-          <Card className="bg-secondary px-8 py-7">
-            <span className="label-caps tracking-[0.18em]">Ваш текст</span>
-            <p className="mt-3.5 text-base leading-7 text-muted-foreground">{DRAFT_SAMPLE}</p>
-          </Card>
-          <div className="flex items-center justify-center py-2" aria-hidden="true">
-            <ArrowRight className="h-[26px] w-[26px] text-primary md:rotate-0 rotate-90" strokeWidth={1.3} />
+          <h1>
+            Из черновика
+            <br />в <span>документ.</span>
+          </h1>
+          <p className="hero-description">
+            Вы пишете по существу.
+            <br />
+            DocxGen помогает с формой.
+          </p>
+          <p className="hero-detail">
+            Исправит текст, соберёт реквизиты и оформит редактируемый DOCX.
+            Начните с того, что уже написали.
+          </p>
+          <div className="hero-actions">
+            <Button onClick={onStart}>
+              Вставить черновик
+              <ArrowUpRight size={18} aria-hidden="true" />
+            </Button>
+            <a href="#example" className="text-link">
+              Посмотреть пример
+              <ArrowDown size={16} aria-hidden="true" />
+            </a>
           </div>
-          <Card className="px-8 py-7">
-            <span className="label-caps tracking-[0.18em]">После обработки</span>
-            <p className="mt-3.5 text-base leading-7">{CORRECTED_SAMPLE}</p>
-          </Card>
-        </div>
-        <p className="mt-4.5 text-sm text-muted-foreground">
-          Адресат и автор при этом ушли из текста в реквизиты — туда, где им место в документе.
-        </p>
-      </Section>
-
-      <Section id="how">
-        <SectionLabel>Три шага</SectionLabel>
-        <div className="mt-7 grid grid-cols-1 gap-10 md:grid-cols-3">
-          {STEPS.map((step) => (
-            <div key={step.num} className="border-t border-border px-7 py-6.5">
-              <span className="font-display text-[40px] font-semibold leading-none text-primary">{step.num}</span>
-              <p className="mt-3.5 font-display text-[25px] font-medium">{step.title}</p>
-              <p className="mt-2.5 text-[15px] leading-[25px] text-muted-foreground text-pretty">{step.text}</p>
-            </div>
+          <div className="hero-note">
+            <Check size={15} aria-hidden="true" />
+            Без регистрации
+            <span className="note-divider" />
+            <FileText size={15} aria-hidden="true" />
+            Формат DOCX
+          </div>
+        </Reveal>
+        <Reveal className="hero-visual" delay={0.12}>
+          <DocumentArtwork />
+          <div className="artwork-caption">
+            <span>Меньше оформления. Больше смысла.</span>
+            <span>.docx</span>
+          </div>
+        </Reveal>
+      </section>
+      <section id="how" className="site-container how-section">
+        <Reveal className="how-heading">
+          <span className="section-kicker">Как это работает</span>
+          <h2>
+            Три шага.
+            <br />
+            Один готовый файл.
+          </h2>
+        </Reveal>
+        <div className="steps-grid">
+          {STEPS.map((step, index) => (
+            <Reveal
+              key={step.title}
+              className="process-step"
+              delay={index * 0.07}
+            >
+              <div className="process-icon">
+                <step.icon size={22} strokeWidth={1.6} aria-hidden="true" />
+              </div>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </Reveal>
           ))}
         </div>
-      </Section>
-
-      <Section id="types">
-        <div className="grid grid-cols-1 gap-14 lg:grid-cols-2 lg:gap-18">
-          <div>
-            <SectionLabel>Типы документов</SectionLabel>
-            <dl className="mt-5.5">
-              {DOCUMENT_TYPES.map((type, i) => (
-                <div
+      </section>
+      <section id="example" className="site-container section-space">
+        <Reveal>
+          <div className="section-heading">
+            <span className="section-kicker">Было и стало</span>
+            <h2>
+              Ваша мысль.
+              <br className="mobile-break" /> В нужной форме.
+            </h2>
+            <p>Посмотрите на примере, как меняется текст.</p>
+          </div>
+        </Reveal>
+        <Reveal className="comparison-panel">
+          <div className="example-toolbar">
+            <div
+              className="example-options"
+              role="group"
+              aria-label="Пример документа"
+            >
+              {DOCUMENT_TYPES.map((type) => (
+                <button
+                  type="button"
+                  aria-pressed={type.id === exampleType}
                   key={type.id}
-                  className={`flex justify-between gap-5 border-t border-border py-4 ${
-                    i === DOCUMENT_TYPES.length - 1 ? 'border-b' : ''
-                  }`}
+                  onClick={() => setExampleType(type.id)}
                 >
-                  <dt className="text-[17px]">{type.label}</dt>
-                  <dd className="text-right text-sm text-muted-foreground">{type.description.toLowerCase()}</dd>
+                  {type.id === "reference" ? "Справка" : type.label}
+                </button>
+              ))}
+            </div>
+            <span className="example-label">Пример</span>
+          </div>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={exampleType}
+              className="comparison-grid"
+              initial={reduced ? false : { opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduced ? {} : { opacity: 0 }}
+              transition={{ duration: reduced ? 0 : 0.16 }}
+            >
+              <div className="comparison-draft">
+                <div className="comparison-label">
+                  <PenLine size={16} aria-hidden="true" />
+                  Ваш черновик
                 </div>
-              ))}
-            </dl>
-          </div>
-
-          <div>
-            <SectionLabel>Два шаблона оформления</SectionLabel>
-            <div className="mt-5.5 flex flex-col gap-4.5">
-              {TEMPLATES.map((template) => (
-                <Card key={template.id} className="px-6.5 py-5.5">
-                  <p className="text-[17px] font-medium">{template.label}</p>
-                  <p className="mt-2 text-[15px] leading-6 text-muted-foreground text-pretty">
-                    {template.description}
-                  </p>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      <Section>
-        <Card className="grid grid-cols-1 gap-10 px-8 py-10 sm:px-14 sm:py-12 lg:grid-cols-2 lg:gap-16">
-          <div>
-            <SectionLabel>Главное ограничение</SectionLabel>
-            <p className="mt-4 font-display text-[40px] leading-[1.1] font-medium">Ничего не досочиняет</p>
-          </div>
-          <div>
-            <p className="text-[17px] leading-[29px] text-secondary-foreground text-pretty">
-              Каждый реквизит, который ИИ извлёк из текста, сверяется с исходником: если подтверждающей
-              цитаты в вашем черновике нет — значение отбрасывается, а поле остаётся пустым.
-            </p>
-            <p className="mt-4 text-[17px] leading-[29px] text-secondary-foreground text-pretty">
-              Пустое поле попадает в документ видимой жёлтой пометкой. Лучше заметный пробел, чем
-              правдоподобно выдуманный номер приказа.
+                <p>{example.draft}</p>
+              </div>
+              <div className="comparison-result">
+                <div className="comparison-label">
+                  <Sparkles size={16} aria-hidden="true" />
+                  После обработки
+                </div>
+                <p>{example.corrected}</p>
+                <div className="result-detail">
+                  <CheckCheck size={16} aria-hidden="true" />
+                  Орфография, пунктуация и деловой стиль
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+          <div className="comparison-footer">
+            <ShieldCheck size={17} aria-hidden="true" />
+            <p>
+              Адресат и автор переносятся в реквизиты. Смысл остаётся вашим.
             </p>
           </div>
-        </Card>
-      </Section>
-
-      <Section id="bots">
-        <SectionLabel>Где работает</SectionLabel>
-        <div className="mt-7 grid grid-cols-1 gap-10 md:grid-cols-3">
-          {CHANNELS.map((channel) => (
-            <div key={channel.title} className="border-t border-border px-7 py-6.5">
-              <p className="text-[19px] font-medium">{channel.title}</p>
-              <p className="mt-2.5 text-[15px] leading-[25px] text-muted-foreground text-pretty">{channel.text}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section>
-        <div className="flex flex-col items-start justify-between gap-9 bg-foreground px-8 py-12 text-background sm:px-14 lg:flex-row lg:items-center">
-          <div>
-            <p className="font-display text-[46px] leading-[1.06] font-medium">
-              Черновик уже написан.
-              <br />
-              Осталось оформить.
-            </p>
-            <p className="mt-4 text-base text-background/65">
-              Первый документ — минуты полторы вместе с чтением результата.
-            </p>
+        </Reveal>
+      </section>
+      <section
+        id="types"
+        className="site-container section-space catalog-section"
+      >
+        <Reveal className="catalog-copy">
+          <h2>
+            Для повседневных
+            <br />
+            рабочих задач.
+          </h2>
+          <p className="section-description">
+            Четыре типа документов и два шаблона оформления. Выберите подходящий
+            для вашей задачи.
+          </p>
+          <div className="type-list">
+            {DOCUMENT_TYPES.map((type) => (
+              <button
+                type="button"
+                key={type.id}
+                aria-pressed={type.id === exampleType}
+                onClick={() => setExampleType(type.id)}
+              >
+                <span className="type-icon">
+                  <FileText size={20} strokeWidth={1.6} aria-hidden="true" />
+                </span>
+                <span>
+                  <strong>{type.label}</strong>
+                  <small>{type.description}</small>
+                </span>
+                <ArrowUpRight size={18} aria-hidden="true" />
+              </button>
+            ))}
           </div>
-          <Button
-            onClick={onStart}
-            className="shrink-0 bg-background text-foreground hover:bg-background/90"
+        </Reveal>
+        <Reveal className="catalog-preview" delay={0.08}>
+          <div
+            className="template-options"
+            role="group"
+            aria-label="Предпросмотр шаблона"
           >
-            Вставить черновик
-          </Button>
+            {TEMPLATES.map((template) => (
+              <button
+                type="button"
+                key={template.id}
+                aria-pressed={template.id === previewTemplate}
+                onClick={() => setPreviewTemplate(template.id)}
+              >
+                {template.id === "classic" ? "Классический" : "Современный"}
+              </button>
+            ))}
+          </div>
+          <div className="catalog-sheet">
+            <DocumentPreview
+              documentType={exampleType}
+              templateId={previewTemplate}
+              text={example.corrected}
+              requisites={{
+                addressee: "Директору Иванову И. И.",
+                authorName: "Петров П. П.",
+                date: "10.09.2026",
+              }}
+            />
+          </div>
+          <p className="preview-disclaimer">
+            Пример структуры. Точное оформление будет в DOCX.
+          </p>
+        </Reveal>
+      </section>
+      <section className="site-container section-space">
+        <Reveal className="trust-panel">
+          <div className="trust-icon">
+            <ShieldCheck size={36} strokeWidth={1.4} aria-hidden="true" />
+          </div>
+          <div>
+            <h2>Ничего не досочиняет.</h2>
+            <p>
+              Реквизиты сверяются с исходным текстом. Если подтверждения нет,
+              поле остаётся пустым. В документе оно выделяется жёлтой пометкой,
+              чтобы вы его заметили.
+            </p>
+          </div>
+          <div className="trust-example">
+            <span>Нет в черновике?</span>
+            <mark>[Номер документа]</mark>
+            <span>Дополните при проверке</span>
+          </div>
+        </Reveal>
+      </section>
+      <section
+        id="bots"
+        className="site-container section-space channels-section"
+      >
+        <Reveal>
+          <h2>Там, где вам удобно.</h2>
+          <p className="section-description">
+            В браузере или в переписке. Знакомый процесс и тот же редактируемый
+            документ.
+          </p>
+        </Reveal>
+        <div className="channel-grid">
+          <Reveal className="channel-browser">
+            <Globe2 size={25} strokeWidth={1.5} aria-hidden="true" />
+            <h3>Браузер</h3>
+            <p>Текст, реквизиты и предпросмотр на одном экране.</p>
+            <button type="button" className="text-link" onClick={onStart}>
+              Вставить черновик
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          </Reveal>
+          <Reveal className="channel-messengers" delay={0.08}>
+            <MessageCircle size={25} strokeWidth={1.5} aria-hidden="true" />
+            <div>
+              <h3>MAX и ВКонтакте</h3>
+              <p>Пришлите черновик боту и получите готовый файл в переписке.</p>
+              <div className="messenger-names">
+                <span>MAX</span>
+                <span>ВКонтакте</span>
+              </div>
+            </div>
+          </Reveal>
         </div>
-      </Section>
-
-      <footer className="mx-auto mt-18 flex max-w-[1136px] items-center justify-between gap-8 border-t border-border px-5 pb-10 pt-7 sm:px-12">
-        <span className="font-display text-[21px] font-medium">DocxGen</span>
-        <span className="text-sm text-muted-foreground">[Организация], 2026</span>
+      </section>
+      <section className="site-container section-space">
+        <Reveal className="closing-section">
+          <FileCheck2 size={32} strokeWidth={1.4} aria-hidden="true" />
+          <h2>
+            Черновик уже написан.
+            <br />
+            <span>Осталось оформить.</span>
+          </h2>
+          <Button onClick={onStart}>
+            Вставить черновик
+            <ArrowUpRight size={18} aria-hidden="true" />
+          </Button>
+          <p>Без регистрации. Файл хранится сутки и удаляется.</p>
+        </Reveal>
+      </section>
+      <footer className="site-container site-footer">
+        <span className="brand-wordmark">DocxGen</span>
+        <span>Документ за три шага</span>
+        <a href="#how">
+          Как это работает
+          <ArrowUpRight size={14} aria-hidden="true" />
+        </a>
       </footer>
-    </div>
+    </main>
   );
 });

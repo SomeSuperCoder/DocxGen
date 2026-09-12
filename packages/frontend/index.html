@@ -1,10 +1,36 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <meta
+      name="description"
+      content="DocxGen помогает исправить черновик, заполнить реквизиты и оформить редактируемый документ DOCX."
+    />
+    <meta name="theme-color" content="#f8f6f5" />
+    <link
+      rel="preload"
+      href="/fonts/q5uCsoe9Lv5t7Meb31EcExd8hLxR.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <title>DocxGen · Документ за три шага</title>
+    <script>
+      (() => {
+        let theme;
+        try {
+          theme = localStorage.getItem("docxgen-theme");
+        } catch {}
+        if (theme !== "light" && theme !== "dark")
+          theme = matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

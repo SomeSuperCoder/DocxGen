@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+
+import { CheckCheck, PencilLine } from "lucide-react";
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { RequisitesForm } from './RequisitesForm';
@@ -13,7 +14,6 @@ interface CorrectedSectionProps {
   onRequisiteChange: (field: string, value: string) => void;
   disabled: boolean;
 }
-
 export const CorrectedSection = memo(function CorrectedSection({
   correctedText,
   requisites,
@@ -22,45 +22,47 @@ export const CorrectedSection = memo(function CorrectedSection({
   onRequisiteChange,
   disabled,
 }: CorrectedSectionProps) {
-  const prefersReduced = useReducedMotion();
-
   if (!correctedText) return null;
-
   return (
-    <motion.div
-      layout
-      initial={prefersReduced ? false : { opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={prefersReduced ? {} : { opacity: 0, y: -20 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="space-y-9"
-    >
-      <Card className="px-8 py-7">
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="label-caps">Исправленный текст</span>
-          <span className="text-[13px] text-muted-foreground">правится прямо здесь</span>
+    <div>
+      <Card className="editor-card">
+        <div className="editor-card-heading">
+          <label htmlFor="corrected-text">
+            <CheckCheck size={17} aria-hidden="true" />
+            Исправленный текст
+          </label>
+          <span>Можно редактировать</span>
         </div>
         <Textarea
+          id="corrected-text"
           variant="bare"
           value={correctedText}
-          onChange={(e) => onTextChange(e.target.value)}
-          rows={10}
-          className="mt-3.5 resize-y"
+          onChange={(event) => onTextChange(event.target.value)}
+          rows={9}
+          className="editor-textarea"
           disabled={disabled}
         />
-      </Card>
-
-      <div>
-        <span className="label-caps">Реквизиты</span>
-        <div className="mt-1.5">
-          <RequisitesForm
-            docTypeFields={docTypeFields}
-            requisites={requisites}
-            onChange={onRequisiteChange}
-            disabled={disabled}
-          />
+        <div className="editor-card-footer">
+          <span>
+            <PencilLine size={12} aria-hidden="true" />
+            Проверьте текст перед скачиванием
+          </span>
+          <span>{correctedText.length.toLocaleString("ru-RU")} симв.</span>
         </div>
-      </div>
-    </motion.div>
+      </Card>
+      <section
+        className="requisites-panel"
+        aria-labelledby="requisites-heading"
+      >
+        <h2 id="requisites-heading">Реквизиты</h2>
+        <p>Дополните пустые поля или оставьте заметную пометку.</p>
+        <RequisitesForm
+          docTypeFields={docTypeFields}
+          requisites={requisites}
+          onChange={onRequisiteChange}
+          disabled={disabled}
+        />
+      </section>
+    </div>
   );
 });
