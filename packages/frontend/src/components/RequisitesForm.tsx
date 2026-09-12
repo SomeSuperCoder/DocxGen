@@ -51,7 +51,7 @@ export const RequisitesForm = memo(function RequisitesForm({
               readOnly={!isEditable}
               className={cn(
                 'w-full border-0 border-b bg-transparent px-0 py-2 text-base text-foreground transition-colors',
-                'placeholder:text-muted-foreground/60 focus:outline-none focus-visible:border-ring',
+                'placeholder:text-muted-foreground/60 focus:outline-none focus-visible:outline-none focus-visible:border-primary',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 'read-only:cursor-default',
                 empty ? 'border-warning' : 'border-border',
