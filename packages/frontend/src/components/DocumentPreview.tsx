@@ -18,22 +18,23 @@ export function DocumentPreview({
   requisites,
 }: DocumentPreviewProps) {
   const title = DOCUMENT_TYPES.find((item) => item.id === documentType)?.label;
+  // Keys are the Russian field labels from the backend catalog (config/doc-types/*.json).
   const addressee =
     documentType === "letter"
       ? [
-          requisites.addresseeOrg,
-          requisites.addresseePerson,
-          requisites.addresseeAddress,
+          requisites["Организация адресата"],
+          requisites["Лицо адресата"],
+          requisites["Адрес адресата"],
         ]
           .filter(Boolean)
-          .join("\n") || requisites.addressee
-      : requisites.addressee;
+          .join("\n") || requisites["Адресат"]
+      : requisites["Адресат"];
   const author =
     documentType === "letter"
-      ? [requisites.signerPosition, requisites.signerName]
+      ? [requisites["Должность подписывающего"], requisites["ФИО подписывающего"]]
           .filter(Boolean)
-          .join("\n") || requisites.authorName
-      : [requisites.authorPosition, requisites.authorName]
+          .join("\n") || requisites["ФИО автора"]
+      : [requisites["Должность автора"], requisites["ФИО автора"]]
           .filter(Boolean)
           .join("\n");
   return (
@@ -47,14 +48,14 @@ export function DocumentPreview({
       {(documentType === "memo" || documentType === "report") && (
         <p className="sheet-meta">
           №{" "}
-          {requisites.number || (
+          {requisites["Номер"] || (
             <span className="sheet-placeholder">[Номер]</span>
           )}
         </p>
       )}
       {documentType === "reference" && (
         <p className="sheet-meta">
-          {requisites.period || (
+          {requisites["Период"] || (
             <span className="sheet-placeholder">[Период]</span>
           )}
         </p>
@@ -76,11 +77,11 @@ export function DocumentPreview({
           {author || <span className="sheet-placeholder">[Автор]</span>}
         </span>
         <span>
-          {requisites.date || <span className="sheet-placeholder">[Дата]</span>}
+          {requisites["Дата"] || <span className="sheet-placeholder">[Дата]</span>}
         </span>
       </div>
-      {documentType === "letter" && requisites.executor && (
-        <p className="sheet-meta">Исполнитель: {requisites.executor}</p>
+      {documentType === "letter" && requisites["Исполнитель"] && (
+        <p className="sheet-meta">Исполнитель: {requisites["Исполнитель"]}</p>
       )}
     </div>
   );
