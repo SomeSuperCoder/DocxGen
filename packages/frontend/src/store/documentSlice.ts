@@ -85,6 +85,10 @@ export const processText = createAsyncThunk<
           : String(field ?? ''),
       ]),
     );
+    // Backend fallback: if Тема is empty, use AI-generated title (matches mergeRequisites logic)
+    if (!aiRequisites['Тема'] && current.version.title) {
+      aiRequisites['Тема'] = current.version.title;
+    }
     const warnings = (current.version.warnings ?? []).map((warning) => (
       typeof warning === 'string'
         ? warning
