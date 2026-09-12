@@ -609,7 +609,7 @@ svg {
 .document-sheet {
   display: flex;
   flex-direction: column;
-  min-height: 400px;
+  min-height: 360px;
   padding: 36px 28px 24px;
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
@@ -868,11 +868,12 @@ svg {
 .workspace-sidebar {
   position: sticky;
   top: 110px;
-  overflow: hidden;
+  overflow: auto;
   border: 1px solid hsl(var(--border));
   background: hsl(var(--secondary) / 0.5);
   border-radius: 16px;
   padding: 20px;
+  max-height: calc(100vh - 240px);
 }
 .preview-heading {
   display: flex;
