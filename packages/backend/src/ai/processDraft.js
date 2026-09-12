@@ -117,7 +117,8 @@ export async function processDraft({ draft, docType, userFields, provider, log, 
         log?.debug({ key, reason: check.reason }, 'field_grounding_failed');
         warnings.push({ key, reason: check.reason, severity: 'grounding' });
         groundedFields.push({ key, reason: check.reason });
-        aiFields[key] = null;
+        // Preserve value with ungrounded flag — flows to DOCX as 'ai_ungrounded' source
+        aiFields[key] = { ...fieldVal, ungrounded: true };
         continue;
       }
     }
@@ -129,7 +130,8 @@ export async function processDraft({ draft, docType, userFields, provider, log, 
         log?.debug({ key, reason: check.reason }, 'derived_field_grounding_failed');
         warnings.push({ key, reason: check.reason, severity: 'grounding' });
         groundedFields.push({ key, reason: check.reason });
-        aiFields[key] = null;
+        // Preserve value with ungrounded flag — flows to DOCX as 'ai_ungrounded' source
+        aiFields[key] = { ...fieldVal, ungrounded: true };
         continue;
       }
     }

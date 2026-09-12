@@ -134,7 +134,7 @@ describe('processDraft', () => {
     expect(provider.complete).toHaveBeenCalledTimes(2);
   });
 
-  it('field with quote not in source → grounding fails, field becomes null', async () => {
+  it('field with quote not in source → grounding fails, field preserved as ungrounded', async () => {
     const provider = makeProvider();
     provider.complete.mockResolvedValueOnce(JSON.stringify({
       title: null,
@@ -153,7 +153,8 @@ describe('processDraft', () => {
       log: null,
     });
 
-    expect(result.aiFields.recipient).toBeNull();
+    expect(result.aiFields.recipient).toEqual({ value: 'Петровой А.С.', quote: 'несуществующая цитата', ungrounded: true });
+    expect(result.aiFields.recipient.ungrounded).toBe(true);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0].key).toBe('recipient');
     expect(result.warnings[0].reason).toBe('quote_not_in_source');
@@ -299,7 +300,7 @@ describe('processDraft', () => {
     expect(result.groundedFields).toHaveLength(1);
     expect(result.groundedFields[0].key).toBe('recipient');
     expect(result.groundedFields[0].reason).toBe('quote_not_in_source');
-    expect(result.aiFields.recipient).toBeNull();
+    expect(result.aiFields.recipient).toEqual({ value: 'Петровой А.С.', quote: 'несуществующая цитата', ungrounded: true });
   });
 
   it('retry uses stronger system instruction', async () => {
@@ -471,7 +472,7 @@ describe('processDraft', () => {
     expect(retrySystemMessage).toContain('ВАЖНО');
   });
 
-  it('derived field in result.fields NOT grounded → null and groundedFields entry', async () => {
+  it('derived field NOT grounded → preserved as ungrounded with groundedFields entry', async () => {
     const provider = makeProvider();
     const draftWithSender = 'Записка для Петровой А.С. от Иванова И.И. о командировке в Москву 01.01.2025';
     // Add a derived field to docType
@@ -503,8 +504,9 @@ describe('processDraft', () => {
       log: null,
     });
 
-    // salutation is derived, not grounded → null
-    expect(result.aiFields.salutation).toBeNull();
+    // salutation is derived, not grounded → preserved with ungrounded flag
+    expect(result.aiFields.salutation).toEqual({ value: 'Протокол совещания', quote: 'Протокол совещания', ungrounded: true });
+    expect(result.aiFields.salutation.ungrounded).toBe(true);
     expect(result.groundedFields.length).toBeGreaterThan(0);
     expect(result.groundedFields.some(f => f.key === 'salutation')).toBe(true);
   });

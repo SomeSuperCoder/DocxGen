@@ -64,10 +64,10 @@ export function mergeRequisites({ docType, template, aiFields, title, userFields
       value = null;
       source = 'user_skip';
     }
-    // Priority 3: AI-verified value
+    // Priority 3: AI-verified value (including ungrounded)
     else if (aiVal && aiVal.value) {
       value = aiVal.value;
-      source = 'ai';
+      source = aiVal.ungrounded ? 'ai_ungrounded' : 'ai';
     }
     // Priority 4: Auto value (date) — key is "Дата" now, not "date"
     else if (field.kind === 'auto' && fieldKey === 'Дата' && template.autoFill?.date) {
