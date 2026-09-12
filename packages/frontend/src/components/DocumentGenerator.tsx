@@ -1,17 +1,26 @@
-import { useMemo, useCallback } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { useAppDispatch, useAppSelector } from '@/hooks';
-import { setText, setCorrectedText, setDocumentType, setTemplateId, processText, generateDocument } from '@/store/documentSlice';
-import { DOCUMENT_TYPES, TEMPLATES } from '@/lib/constants';
-import type { DocumentTypeId, TemplateId } from '@/types/document';
+import { useMemo, useCallback } from "react";
+import { Eye, ShieldCheck } from "lucide-react";
+import { DocumentPreview } from "./DocumentPreview";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useAppDispatch, useAppSelector } from "@/hooks";
+import {
+  setText,
+  setCorrectedText,
+  setDocumentType,
+  setTemplateId,
+  processText,
+  generateDocument,
+} from "@/store/documentSlice";
+import { DOCUMENT_TYPES, TEMPLATES } from "@/lib/constants";
+import type { DocumentTypeId, TemplateId } from "@/types/document";
 
-import { StepIndicator } from './StepIndicator';
-import { DraftSection } from './DraftSection';
-import { CorrectedSection } from './CorrectedSection';
-import { StatusBar } from './StatusBar';
-import { ErrorBar } from './ErrorBar';
-import { ValidationAlert } from './ValidationAlert';
-import { ActionButton } from './ActionButton';
+import { StepIndicator } from "./StepIndicator";
+import { DraftSection } from "./DraftSection";
+import { CorrectedSection } from "./CorrectedSection";
+import { StatusBar } from "./StatusBar";
+import { ErrorBar } from "./ErrorBar";
+import { ValidationAlert } from "./ValidationAlert";
+import { ActionButton } from "./ActionButton";
 
 export function DocumentGenerator() {
   const prefersReduced = useReducedMotion();
@@ -30,33 +39,62 @@ export function DocumentGenerator() {
   const generating = useAppSelector((s) => s.document.generating);
 
   const typeDescription = useMemo(
-    () => DOCUMENT_TYPES.find((item) => item.id === documentType)?.description ?? '',
+    () =>
+      DOCUMENT_TYPES.find((item) => item.id === documentType)?.description ??
+      "",
     [documentType],
   );
 
   const templateLabel = useMemo(
-    () => TEMPLATES.find((item) => item.id === templateId)?.label ?? '',
+    () => TEMPLATES.find((item) => item.id === templateId)?.label ?? "",
     [templateId],
   );
 
   const visibleFields = useMemo(() => {
-    if (documentType === 'reference') return ['authorPosition', 'authorName', 'addressee', 'period'];
-    if (documentType === 'letter') return ['addresseeOrg', 'addresseePerson', 'addresseeAddress', 'signerPosition', 'signerName', 'executor'];
-    return ['addressee', 'authorPosition', 'authorName', 'number'];
+    if (documentType === "reference")
+      return ["authorPosition", "authorName", "addressee", "period"];
+    if (documentType === "letter")
+      return [
+        "addresseeOrg",
+        "addresseePerson",
+        "addresseeAddress",
+        "signerPosition",
+        "signerName",
+        "executor",
+      ];
+    return ["addressee", "authorPosition", "authorName", "number"];
   }, [documentType]);
 
   const currentStep = correctedText ? 2 : 1;
 
-  const handleTextChange = useCallback((value: string) => dispatch(setText(value)), [dispatch]);
-  const handleCorrectedTextChange = useCallback((value: string) => dispatch(setCorrectedText(value)), [dispatch]);
-  const handleTypeChange = useCallback((value: DocumentTypeId) => {
-    dispatch(setDocumentType(value));
-    dispatch(setCorrectedText(''));
-  }, [dispatch]);
-  const handleTemplateChange = useCallback((value: TemplateId) => dispatch(setTemplateId(value)), [dispatch]);
-  const handleRequisiteChange = useCallback((field: string, value: string) => {
-    dispatch({ type: 'document/setRequisites', payload: { ...requisites, [field]: value } });
-  }, [dispatch, requisites]);
+  const handleTextChange = useCallback(
+    (value: string) => dispatch(setText(value)),
+    [dispatch],
+  );
+  const handleCorrectedTextChange = useCallback(
+    (value: string) => dispatch(setCorrectedText(value)),
+    [dispatch],
+  );
+  const handleTypeChange = useCallback(
+    (value: DocumentTypeId) => {
+      dispatch(setDocumentType(value));
+      dispatch(setCorrectedText(""));
+    },
+    [dispatch],
+  );
+  const handleTemplateChange = useCallback(
+    (value: TemplateId) => dispatch(setTemplateId(value)),
+    [dispatch],
+  );
+  const handleRequisiteChange = useCallback(
+    (field: string, value: string) => {
+      dispatch({
+        type: "document/setRequisites",
+        payload: { ...requisites, [field]: value },
+      });
+    },
+    [dispatch, requisites],
+  );
 
   const handleProcess = useCallback(() => {
     if (!text.trim()) return;
@@ -65,96 +103,142 @@ export function DocumentGenerator() {
 
   const handleGenerate = useCallback(() => {
     if (!text.trim() || !correctedText.trim()) return;
-    dispatch(generateDocument({ text, correctedText, requisites, documentType, templateId }));
+    dispatch(
+      generateDocument({
+        text,
+        correctedText,
+        requisites,
+        documentType,
+        templateId,
+      }),
+    );
   }, [dispatch, text, correctedText, requisites, documentType, templateId]);
 
   const handleAction = correctedText ? handleGenerate : handleProcess;
-  const actionDisabled = correctedText ? generating : !text.trim() || processing;
+  const actionDisabled = correctedText
+    ? generating
+    : !text.trim() || processing;
 
   return (
     <motion.div
       initial={prefersReduced ? false : { opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="mx-auto w-full max-w-[812px]"
+      transition={{ duration: prefersReduced ? 0 : 0.4, ease: "easeOut" }}
+      className="site-container"
     >
-      {/* Название теперь в общей шапке — здесь остаётся только выбранный шаблон */}
-      <div className="flex justify-end">
-        <span className="label-caps tracking-[0.18em]">{templateLabel}</span>
+      <div className="workspace-heading">
+        <div>
+          <h1>Документ за три шага</h1>
+          <p>
+            Добавьте черновик, проверьте результат и скачайте DOCX.
+            <br />
+            Оформление возьмём на себя.
+          </p>
+        </div>
+        <span className="workspace-badge">
+          <ShieldCheck size={15} aria-hidden="true" />
+          Без регистрации
+        </span>
       </div>
-
-      <h1 className="mt-4.5 font-display text-5xl leading-[1.02] font-medium tracking-tight sm:text-[56px]">
-        Документ
-        <br />
-        за три шага
-      </h1>
-      <p className="mt-4 max-w-[470px] text-base leading-7 text-muted-foreground text-pretty">
-        Черновик как есть — с ошибками и обрывками. Дальше правка орфографии, грамматики и стиля,
-        разбор реквизитов и готовый DOCX. Ничего, чего нет в вашем тексте, не добавляется.
-      </p>
-
-      <StepIndicator currentStep={currentStep} className="mt-10" />
-
-      <div className="mt-7 space-y-7">
-        <AnimatePresence mode="wait">
-          {!correctedText && (
-            <motion.div
-              key="draft"
-              initial={prefersReduced ? false : undefined}
-              animate={prefersReduced ? {} : { opacity: 1 }}
-              exit={prefersReduced ? {} : { opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-            >
-              <DraftSection
-                text={text}
-                documentType={documentType}
-                templateId={templateId}
-                typeDescription={typeDescription}
-                onTextChange={handleTextChange}
-                onTypeChange={handleTypeChange}
-                onTemplateChange={handleTemplateChange}
-                disabled={processing || generating}
+      <StepIndicator
+        currentStep={currentStep}
+        complete={status === "Документ готов" && !error && !generating}
+      />
+      <div className="workspace-grid">
+        <div className="workspace-editor">
+          <AnimatePresence mode="wait" initial={false}>
+            {!correctedText ? (
+              <motion.div
+                key="draft"
+                initial={prefersReduced ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={prefersReduced ? {} : { opacity: 0 }}
+                transition={{ duration: prefersReduced ? 0 : 0.2 }}
+              >
+                <DraftSection
+                  text={text}
+                  documentType={documentType}
+                  templateId={templateId}
+                  typeDescription={typeDescription}
+                  onTextChange={handleTextChange}
+                  onTypeChange={handleTypeChange}
+                  onTemplateChange={handleTemplateChange}
+                  disabled={processing || generating}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="corrected"
+                initial={prefersReduced ? false : { opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReduced ? {} : { opacity: 0 }}
+                transition={{ duration: prefersReduced ? 0 : 0.25 }}
+              >
+                <CorrectedSection
+                  correctedText={correctedText}
+                  requisites={requisites}
+                  visibleFields={visibleFields}
+                  onTextChange={handleCorrectedTextChange}
+                  onRequisiteChange={handleRequisiteChange}
+                  disabled={processing || generating}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {(status || error) && (
+            <div className="workspace-alert">
+              <StatusBar
+                status={status}
+                isVisible={!!status && !error}
+                busy={processing || generating}
               />
-            </motion.div>
+              <ErrorBar error={error} isVisible={!!error} />
+            </div>
           )}
-        </AnimatePresence>
-
-        <StatusBar status={status} isVisible={!!status} />
-        <ErrorBar error={error} isVisible={!!error} />
-
-        <AnimatePresence mode="wait">
-          {correctedText && (
-            <motion.div
-              key="corrected"
-              initial={prefersReduced ? false : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={prefersReduced ? {} : { opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-              layout
-            >
-              <CorrectedSection
-                correctedText={correctedText}
-                requisites={requisites}
-                visibleFields={visibleFields}
-                onTextChange={handleCorrectedTextChange}
-                onRequisiteChange={handleRequisiteChange}
-                disabled={processing || generating}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <ValidationAlert missingFields={missingFields} warnings={warnings} />
-      </div>
-
-      <div className="mt-11">
-        <ActionButton
-          step={currentStep}
-          processing={processing}
-          generating={generating}
-          onClick={handleAction}
-          disabled={actionDisabled}
-        />
+          <ValidationAlert missingFields={missingFields} warnings={warnings} />
+          <div className="workspace-action-bar">
+            <p className="workspace-action-note">
+              {correctedText
+                ? "Все правки попадут в итоговый файл."
+                : "Сначала покажем результат. Вы сможете всё проверить."}
+            </p>
+            <ActionButton
+              step={currentStep}
+              processing={processing}
+              generating={generating}
+              onClick={handleAction}
+              disabled={actionDisabled}
+            />
+          </div>
+        </div>
+        <aside
+          className="workspace-sidebar"
+          aria-label="Предпросмотр документа"
+        >
+          <h2 className="preview-heading">
+            <span>
+              <Eye size={15} aria-hidden="true" />
+              Предпросмотр структуры
+            </span>
+            <span>DOCX</span>
+          </h2>
+          <DocumentPreview
+            documentType={documentType}
+            templateId={templateId}
+            text={correctedText || text}
+            requisites={requisites}
+          />
+          <p className="preview-template-name">{templateLabel}</p>
+          <p className="preview-template-description">
+            {
+              TEMPLATES.find((template) => template.id === templateId)
+                ?.description
+            }
+          </p>
+          <p className="preview-disclaimer">
+            Точное оформление будет в скачанном файле.
+          </p>
+        </aside>
       </div>
     </motion.div>
   );

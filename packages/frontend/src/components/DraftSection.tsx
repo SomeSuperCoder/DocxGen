@@ -1,16 +1,18 @@
-import { memo } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
-import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import { memo } from "react";
+import { FileText, LockKeyhole, Sparkles } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { DOCUMENT_TYPES, TEMPLATES } from '@/lib/constants';
-import type { DocumentTypeId, TemplateId } from '@/types/document';
+} from "@/components/ui/select";
+import { DOCUMENT_TYPES, TEMPLATES } from "@/lib/constants";
+import { DOCUMENT_EXAMPLES } from "@/lib/examples";
+import type { DocumentTypeId, TemplateId } from "@/types/document";
 
 interface DraftSectionProps {
   text: string;
@@ -22,7 +24,6 @@ interface DraftSectionProps {
   onTemplateChange: (value: TemplateId) => void;
   disabled: boolean;
 }
-
 export const DraftSection = memo(function DraftSection({
   text,
   documentType,
@@ -33,35 +34,57 @@ export const DraftSection = memo(function DraftSection({
   onTemplateChange,
   disabled,
 }: DraftSectionProps) {
-  const prefersReduced = useReducedMotion();
-
   return (
-    <motion.div
-      layout
-      initial={prefersReduced ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={prefersReduced ? {} : { opacity: 0, height: 0 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="space-y-9"
-    >
-      <Card className="px-8 py-7">
-        <span className="label-caps">Черновик</span>
+    <div>
+      <Card className="editor-card">
+        <div className="editor-card-heading">
+          <label htmlFor="draft-text">
+            <FileText size={17} strokeWidth={1.6} aria-hidden="true" />
+            Черновик
+          </label>
+          {!text && (
+            <Button
+              size="bare"
+              variant="ghost"
+              disabled={disabled}
+              onClick={() =>
+                onTextChange(DOCUMENT_EXAMPLES[documentType].draft)
+              }
+              className="text-[11px] text-primary"
+            >
+              <Sparkles size={13} aria-hidden="true" />
+              Начать с примера
+            </Button>
+          )}
+        </div>
         <Textarea
+          id="draft-text"
           variant="bare"
-          placeholder="Вставьте текст сюда. Можно как есть — со строчных, без запятых, обрывками. Разберу."
+          placeholder="Вставьте текст сюда. Можно как есть: со строчных, без запятых, обрывками. Поможем привести его в порядок."
           value={text}
-          onChange={(e) => onTextChange(e.target.value)}
+          onChange={(event) => onTextChange(event.target.value)}
           rows={9}
-          className="mt-3.5 resize-y"
+          className="editor-textarea"
           disabled={disabled}
+          aria-describedby="draft-help"
         />
+        <div className="editor-card-footer">
+          <span id="draft-help">
+            <LockKeyhole size={12} aria-hidden="true" />
+            Отправляется после нажатия кнопки
+          </span>
+          <span>{text.length.toLocaleString("ru-RU")} симв.</span>
+        </div>
       </Card>
-
-      <div className="grid grid-cols-1 items-start gap-10 md:grid-cols-2">
+      <div className="draft-settings">
         <div>
-          <span className="label-caps" id="doc-type-label">Тип документа</span>
-          <Select value={documentType} onValueChange={(v) => onTypeChange(v as DocumentTypeId)} disabled={disabled}>
-            <SelectTrigger className="mt-1.5" aria-labelledby="doc-type-label">
+          <label id="doc-type-label">Тип документа</label>
+          <Select
+            value={documentType}
+            onValueChange={(value) => onTypeChange(value as DocumentTypeId)}
+            disabled={disabled}
+          >
+            <SelectTrigger className="mt-2" aria-labelledby="doc-type-label">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -72,13 +95,16 @@ export const DraftSection = memo(function DraftSection({
               ))}
             </SelectContent>
           </Select>
-          <span className="mt-2.5 block text-sm text-muted-foreground">{typeDescription}</span>
+          <p className="setting-description">{typeDescription}</p>
         </div>
-
         <div>
-          <span className="label-caps" id="template-label">Шаблон оформления</span>
-          <Select value={templateId} onValueChange={(v) => onTemplateChange(v as TemplateId)} disabled={disabled}>
-            <SelectTrigger className="mt-1.5" aria-labelledby="template-label">
+          <label id="template-label">Шаблон оформления</label>
+          <Select
+            value={templateId}
+            onValueChange={(value) => onTemplateChange(value as TemplateId)}
+            disabled={disabled}
+          >
+            <SelectTrigger className="mt-2" aria-labelledby="template-label">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -89,11 +115,13 @@ export const DraftSection = memo(function DraftSection({
               ))}
             </SelectContent>
           </Select>
-          <span className="mt-2.5 block text-sm text-muted-foreground">
-            Тип задаёт структуру, шаблон — оформление.
-          </span>
+          <p className="setting-description">
+            {templateId === "classic"
+              ? "Times New Roman, 14 пт. Полуторный интервал."
+              : "Arial, 12 пт. Компактное оформление."}
+          </p>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 });

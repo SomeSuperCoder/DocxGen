@@ -1,8 +1,6 @@
-import { memo } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
-import { Download, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
+import { memo } from "react";
+import { ArrowRight, Download, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 interface ActionButtonProps {
   step: 1 | 2;
   processing: boolean;
@@ -18,36 +16,26 @@ export const ActionButton = memo(function ActionButton({
   onClick,
   disabled,
 }: ActionButtonProps) {
-  const prefersReduced = useReducedMotion();
-  const isStep1 = step === 1;
-
+  const busy = processing || generating;
   return (
-    <motion.div
-      whileTap={prefersReduced || disabled ? {} : { scale: 0.99 }}
-      transition={{ duration: 0.1, ease: 'easeInOut' }}
+    <Button
+      onClick={onClick}
+      disabled={disabled}
+      aria-busy={busy}
+      className="w-full sm:w-auto text-xs sm:text-[13px]"
     >
-      <Button onClick={onClick} disabled={disabled} className="w-full sm:w-auto sm:min-w-[280px]">
-        {isStep1 ? (
-          processing ? (
-            <>
-              <Loader2 className="mr-2.5 h-[15px] w-[15px] animate-spin" strokeWidth={2} />
-              Обработка…
-            </>
-          ) : (
-            '1. Обработать черновик'
-          )
-        ) : generating ? (
-          <>
-            <Loader2 className="mr-2.5 h-[15px] w-[15px] animate-spin" strokeWidth={2} />
-            Формирование…
-          </>
-        ) : (
-          <>
-            <Download className="mr-2.5 h-[15px] w-[15px]" strokeWidth={2} />
-            2. Сформировать и скачать DOCX
-          </>
-        )}
-      </Button>
-    </motion.div>
+      {step === 1 ? (
+        <>
+          <Sparkles size={16} aria-hidden="true" />
+          {processing ? "Обработка…" : "Обработать черновик"}
+          {!processing && <ArrowRight size={16} aria-hidden="true" />}
+        </>
+      ) : (
+        <>
+          <Download size={16} aria-hidden="true" />
+          {generating ? "Формирование…" : "Сформировать и скачать DOCX"}
+        </>
+      )}
+    </Button>
   );
 });
