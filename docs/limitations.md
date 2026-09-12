@@ -1,7 +1,5 @@
 # Current limitations
 
-- `LOCAL_CHAT=1` is a development stand without login. Do not expose it on a
-  public URL.
 - SQLite and generated files are local to `DATA_DIR`; use a persistent volume
   and a single backend instance for deployment.
 - Polling modes are intended for local MAX/VK checks. Public deployments need

@@ -567,4 +567,87 @@ describe('flow', () => {
     expect(conv.state).toBe('editing');
     expect(r[0].text).toContain('Отправьте исправленный текст');
   });
+
+  // ── Оформление: HTML-разметка и иллюстрации ─────────────────────────────
+
+  it('illustrates greeting, type and template choice, ready and AI failure', async () => {
+    const conv = makeConversation();
+
+    const greeting = await flow.handle(conv, commandEvent('start'));
+    expect(greeting[0].image).toEqual({ name: 'greeting' });
+
+    await flow.handle(conv, makeEvent({ text: 'Текст черновика' }));
+    const types = await flow.handle(conv, actionEvent({ a: 'continue', r: conv.stateVersion }));
+    expect(types[0].image).toEqual({ name: 'types' });
+
+    const tmpl = await flow.handle(conv, actionEvent({ a: 'set_type', v: 'memo', r: conv.stateVersion }));
+    expect(tmpl[0].image).toEqual({ name: 'templates' });
+
+    const failed = await flow.onDocumentEvent(
+      { ...conv, userId: 'user-1', state: 'processing' },
+      { type: 'failed', documentId: conv.documentId },
+    );
+    expect(failed[0].image).toEqual({ name: 'ai-error' });
+
+    const editing = makeConversation({ state: 'editing', documentId: conv.documentId, stateVersion: 9 });
+    const ready = await flow.handle(editing, makeEvent({ text: 'О закупке\n\nТекст' }));
+    expect(ready[0].image).toEqual({ name: 'ready' });
+    expect(ready[1].file).toBeDefined();
+  });
+
+  it('marks every text reply of the main path as HTML', async () => {
+    const conv = makeConversation();
+    const replies = [
+      ...await flow.handle(conv, commandEvent('start')),
+      ...await flow.handle(conv, commandEvent('help')),
+      ...await flow.handle(conv, makeEvent({ text: 'Текст черновика' })),
+      ...await flow.handle(conv, actionEvent({ a: 'show_draft', r: conv.stateVersion })),
+      ...await flow.handle(conv, actionEvent({ a: 'continue', r: conv.stateVersion })),
+      ...await flow.handle(conv, actionEvent({ a: 'set_type', v: 'memo', r: conv.stateVersion })),
+      ...await flow.handle(conv, actionEvent({ a: 'set_template', v: 'classic', r: conv.stateVersion })),
+      ...await flow.handle(conv, makeEvent({ text: 'ещё текст' })),
+    ];
+    const textReplies = replies.filter((reply) => reply.text !== undefined);
+    expect(textReplies.length).toBeGreaterThan(5);
+    for (const reply of textReplies) expect(reply.format, reply.text).toBe('html');
+  });
+
+  // ── Голосовые сообщения ────────────────────────────────────────────────
+
+  it('treats a recognized voice message as a typed draft and echoes the transcript', async () => {
+    const transcribeAudio = vi.fn(async () => ({ text: 'прошу выделить ноутбук' }));
+    const voiceFlow = createFlow({ docServiceClient: client, docTypes: mockDocTypesService(), templates: mockTemplatesService(), log: mockLog, transcribeAudio });
+    const conv = makeConversation();
+    const audio = { type: 'audio', payload: { url: 'https://max.test/voice.ogg' } };
+
+    const r = await voiceFlow.handle(conv, makeEvent({ kind: 'audio', audio }));
+
+    expect(transcribeAudio).toHaveBeenCalledWith(audio, { platform: 'max', ownerId: 'user-1' });
+    expect(r[0]).toMatchObject({ format: 'html' });
+    expect(r[0].text).toContain('прошу выделить ноутбук');
+    expect(r[1].text).toContain('Принято');
+    expect(conv.state).toBe('collecting');
+    expect(docs.get(conv.documentId).source_text).toBe('прошу выделить ноутбук');
+  });
+
+  it('asks to repeat when the voice message cannot be recognized', async () => {
+    const transcribeAudio = vi.fn(async () => { throw Object.assign(new Error('Речь не распознана'), { code: 'STT_FAILED' }); });
+    const voiceFlow = createFlow({ docServiceClient: client, docTypes: mockDocTypesService(), templates: mockTemplatesService(), log: mockLog, transcribeAudio });
+    const conv = makeConversation();
+
+    const r = await voiceFlow.handle(conv, makeEvent({ kind: 'audio', audio: { type: 'audio', payload: { url: 'u' } } }));
+
+    expect(r).toHaveLength(1);
+    expect(r[0]).toMatchObject({ format: 'html' });
+    expect(r[0].text).toContain('Не удалось распознать');
+    expect(conv.state).toBe('idle');
+  });
+
+  it('escapes the user draft before sending it back as HTML', async () => {
+    const conv = makeConversation();
+    await flow.handle(conv, makeEvent({ text: 'если a < b & c > d <b>жирно</b>' }));
+    const r = await flow.handle(conv, actionEvent({ a: 'show_draft', r: conv.stateVersion }));
+    expect(r[0].format).toBe('html');
+    expect(r[0].text).toContain('a &lt; b &amp; c &gt; d &lt;b&gt;жирно&lt;/b&gt;');
+  });
 });

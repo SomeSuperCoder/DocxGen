@@ -33,7 +33,7 @@ fields have been resolved.
 
 ## Debugging
 
-With `DEBUG_COMMANDS=1`, the local stand supports `/ai_fail` and the backend
+With `DEBUG_COMMANDS=1`, the MAX and VK bots accept `/ai_fail` and the backend
 exposes the owner-scoped debug route `POST /api/debug/ai-fault`. Processing
 stages, prompt metadata, raw provider output and validation results are stored
-in `processing_log` and are available in the local stand's processing log view.
+in `processing_log` and are available via `GET /api/documents/:id/log`.

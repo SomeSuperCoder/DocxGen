@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <style>
+      .serif { font-family: Georgia, 'Times New Roman', serif; }
+      .sans { font-family: 'Golos Text', Arial, sans-serif; }
+      .caps { font-family: 'Golos Text', Arial, sans-serif; font-size: 15px; font-weight: 600; letter-spacing: 3.5px; fill: #8A7F82; }
+    </style>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#5B3A2E" flood-opacity="0.13"/>
+    </filter>
+    <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#5B3A2E" flood-opacity="0.18"/>
+    </filter>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#EADCD3" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#EADCD3" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1280" height="720" fill="#F3EEE7"/>
+
+  <!-- 16:9: содержимое сдвинуто на 40px, чтобы кадр MAX не срезал края -->
+  <g transform="translate(0 40)">
+  <circle cx="960" cy="320" r="320" fill="url(#glow)"/>
+
+  <!-- Текст -->
+  <rect x="88" y="150" width="30" height="3" rx="1.5" fill="#893939"/>
+  <text x="132" y="158" class="caps">ШАГ 3 ИЗ 3</text>
+  <text x="84" y="260" class="serif" font-size="84" fill="#2A2326" letter-spacing="-1.5">Документ</text>
+  <text x="84" y="350" class="serif" font-size="84" font-style="italic" fill="#893939" letter-spacing="-1.5">готов</text>
+  <text x="88" y="412" class="sans" font-size="22" fill="#6F6568">Текст исправлен, реквизиты на месте,</text>
+  <text x="88" y="444" class="sans" font-size="22" fill="#6F6568">оформление — по выбранному шаблону.</text>
+
+  <!-- Файл -->
+  <g filter="url(#soft)">
+    <rect x="88" y="486" width="404" height="80" rx="12" fill="#FFFDF9"/>
+  </g>
+  <rect x="106" y="502" width="48" height="48" rx="8" fill="#893939"/>
+  <text x="130" y="531" text-anchor="middle" class="sans" font-size="12" font-weight="700" fill="#FFFDF9" letter-spacing="0.5">DOCX</text>
+  <text x="172" y="522" class="sans" font-size="18" font-weight="600" fill="#2A2326">Служебная записка.docx</text>
+  <text x="172" y="545" class="sans" font-size="14" fill="#8A7F82">Открывается в Word</text>
+  <path d="M458 514 v 20 m -8 -8 l 8 8 l 8 -8 M448 542 h 20" stroke="#893939" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Стопка листов -->
+  <g transform="rotate(-6 950 330)" filter="url(#shadow)">
+    <rect x="790" y="120" width="330" height="440" rx="4" fill="#F8F2EA"/>
+  </g>
+  <g transform="rotate(3 950 330)">
+    <g filter="url(#shadow)">
+      <rect x="785" y="100" width="330" height="450" rx="4" fill="#FFFDF9"/>
+    </g>
+    <g class="sans" fill="#8A7F82" font-size="12">
+      <text x="1085" y="142" text-anchor="end">Генеральному директору</text>
+      <text x="1085" y="159" text-anchor="end">Набиеву А. А.</text>
+    </g>
+    <text x="950" y="212" text-anchor="middle" class="serif" font-size="21" fill="#2A2326">Служебная записка</text>
+    <g class="sans" font-size="12" fill="#2A2326">
+      <text x="815" y="244">12.09.2026</text>
+      <text x="1085" y="244" text-anchor="end">№ 17</text>
+    </g>
+    <g fill="#E7DFD7">
+      <rect x="815" y="270" width="270" height="7" rx="3.5"/>
+      <rect x="815" y="288" width="270" height="7" rx="3.5"/>
+      <rect x="815" y="306" width="250" height="7" rx="3.5"/>
+      <rect x="815" y="324" width="190" height="7" rx="3.5"/>
+      <rect x="815" y="354" width="270" height="7" rx="3.5"/>
+      <rect x="815" y="372" width="262" height="7" rx="3.5"/>
+      <rect x="815" y="390" width="130" height="7" rx="3.5"/>
+    </g>
+    <line x1="815" y1="452" x2="1085" y2="452" stroke="#EAE2DA" stroke-width="1.5"/>
+    <g class="sans" font-size="13" fill="#2A2326">
+      <text x="815" y="486">Ведущий специалист</text>
+      <text x="815" y="506" fill="#8A7F82">Лапин А. Д.</text>
+    </g>
+    <path d="M1004 500 c 10 -22 18 -24 16 -6 c -2 14 10 -10 18 -12 c 6 -1 2 12 10 8 c 6 -3 10 -6 14 -6" stroke="#893939" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- Галочка -->
+  <g filter="url(#soft)">
+    <circle cx="1168" cy="112" r="52" fill="#893939"/>
+  </g>
+  <circle cx="1168" cy="112" r="43" fill="none" stroke="#FFFDF9" stroke-opacity="0.25" stroke-width="2"/>
+  <path d="M1145 113 l 15 15 l 31 -33" stroke="#FFFDF9" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Искры -->
+  <path d="M742 146 l5 13 13 5 -13 5 -5 13 -5 -13 -13 -5 13 -5z" fill="#C59A3E" opacity="0.85"/>
+  <path d="M1204 386 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z" fill="#893939" opacity="0.6"/>
+  <path d="M760 556 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#893939" opacity="0.5"/>
+  </g>
+</svg>

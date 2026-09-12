@@ -1,15 +1,17 @@
 # Architecture
 
-DocxGen runs as one backend process. The web API, MAX, VK and the local chat are
-transport adapters around the same document service, queue, worker, AI pipeline
-and SQLite database.
+DocxGen runs as one backend process. The web API, MAX and VK are transport
+adapters around the same document service, queue, worker, AI pipeline and
+SQLite database. Speech recognition runs in a separate audio service (Vosk) used
+by both the web microphone and bot voice messages.
 
 ```mermaid
 flowchart LR
   WEB[Web application] --> API[HTTP API]
   MAX[MAX adapter] --> FLOW[Dialog flow]
   VK[VK adapter] --> FLOW
-  LOCAL[Local chat adapter] --> FLOW
+  FLOW -. voice messages .-> STT[Audio service / Vosk]
+  WEB -. microphone .-> STT
   API --> DOC[Document service]
   FLOW --> DOC
   DOC --> Q[SQLite job queue]
@@ -33,15 +35,17 @@ HTTP server, pollers, worker and database together.
   public document view;
 - `jobs/queue.js` and `jobs/worker.js` process AI and rendering jobs;
 - `bot/flow.js` contains the platform-independent dialog state machine;
-- `adapters/max`, `adapters/vk` and `adapters/local` translate platform events
-  into the shared dispatcher and send replies back through their platform;
+- `adapters/max` and `adapters/vk` translate platform events into the shared
+  dispatcher and send replies back through their platform;
+- `audio/botAudio.js` downloads bot voice messages and sends them to the audio
+  service (`audio-service.js`, see [audio-service.md](audio-service.md));
 - `http/api.js` exposes the web API and uses the same document service directly;
 - `client/localDocumentServiceClient.js` is the owner-bound facade used by the
   dialog flow. `client/documentServiceClient.js` remains available for an
   external integration, but is not used by the in-process adapters.
 
-There is deliberately no standalone MAX, VK, local-bot or document-service
-backend process. This keeps one queue and one worker responsible for a job and
+There is deliberately no standalone MAX, VK or document-service backend
+process. This keeps one queue and one worker responsible for a job and
 prevents adapters from consuming each other's work.
 
 ## Ownership
@@ -60,9 +64,8 @@ pnpm dev
 ```
 
 The backend listens on `PORT` (3000 by default); Vite serves the web UI on
-5173 and proxies `/api` and `/health` to that port. Set `LOCAL_CHAT=1` to use
-`/dev/chat`. Enable MAX or VK in the same `.env`; no extra backend command is
-needed.
+5173 and proxies `/api` and `/health` to that port. Enable MAX or VK in the
+same `.env`; no extra backend command is needed.
 
 For production, run `pnpm start` behind an HTTPS reverse proxy when a platform
 requires webhooks. Use `MAX_MODE=polling` and `VK_MODE=longpoll` for local

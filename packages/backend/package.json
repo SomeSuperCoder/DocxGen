@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start:audio-service": "node --env-file-if-exists=../../.env src/audio-service.js",
-    "setup:audio": "bash scripts/setup-audio.sh",
+    "setup:audio": "node scripts/setup-audio.mjs",
     "dev": "node --env-file-if-exists=../../.env --watch src/server.js",
     "start": "node --env-file-if-exists=../../.env src/server.js",
     "test": "vitest run",
@@ -13,7 +13,8 @@
     "opencode:build": "docker build -t doc3steps-opencode opencode",
     "max:subscribe": "node --env-file-if-exists=../../.env scripts/max-subscribe.js",
     "max:poll": "node --env-file-if-exists=../../.env scripts/max-poll.js",
-    "vk:poll": "node --env-file-if-exists=../../.env scripts/vk-poll.js"
+    "vk:poll": "node --env-file-if-exists=../../.env scripts/vk-poll.js",
+    "bot:images": "node scripts/render-bot-images.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^12",
