@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RequisitesForm } from './RequisitesForm';
 import type { Requisites, DocTypeField } from '@/types/document';
 import { ChangeReview } from './ChangeReview';
+import { ResultExport } from './ResultExport';
 
 interface CorrectedSectionProps {
   correctedText: string;
@@ -57,6 +58,7 @@ export const CorrectedSection = memo(function CorrectedSection({
           <span>{correctedText.length.toLocaleString("ru-RU")} симв.</span>
         </div>
       </Card>
+      <ResultExport correctedText={correctedText} requisites={requisites} />
       <section
         className="requisites-panel"
         aria-labelledby="requisites-heading"
