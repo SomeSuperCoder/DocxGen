@@ -1,0 +1,16 @@
+{
+  "id": "act",
+  "name": "Акт",
+  "hint": "Акт выполненных работ, проверки или исследования",
+  "docTitle": "АКТ",
+  "layout": ["orgHeader", "docTitle", "dateNumber", "title", "body", "signature"],
+  "structureHint": "Опишите объект проверки или работы, зафиксируйте результаты, укажите участников комиссии.",
+  "fields": [
+    { "key": "Дата", "label": "Дата", "kind": "auto", "required": true },
+    { "key": "Номер", "label": "Регистрационный номер", "kind": "registry", "required": false,
+      "question": "Номер акта?", "example": "5" },
+    { "key": "Тема", "label": "Тема", "kind": "derived", "required": true },
+    { "key": "ФИО председателя", "label": "ФИО председателя комиссии", "kind": "extract", "required": true,
+      "question": "ФИО председателя комиссии?", "example": "Сидоров П. П." }
+  ]
+}

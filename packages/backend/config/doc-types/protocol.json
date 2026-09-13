@@ -1,0 +1,16 @@
+{
+  "id": "protocol",
+  "name": "Протокол",
+  "hint": "Протокол совещания или заседания: повестка, участники, решения",
+  "docTitle": "ПРОТОКОЛ",
+  "layout": ["orgHeader", "docTitle", "dateNumber", "title", "body", "signature"],
+  "structureHint": "Укажите номер протокола, дату, повестку, участников, обсуждение и принятые решения.",
+  "fields": [
+    { "key": "Дата", "label": "Дата", "kind": "auto", "required": true },
+    { "key": "Номер протокола", "label": "Номер протокола", "kind": "registry", "required": true,
+      "question": "Номер протокола?", "example": "12" },
+    { "key": "Тема", "label": "Тема", "kind": "derived", "required": true },
+    { "key": "ФИО секретаря", "label": "ФИО секретаря", "kind": "extract", "required": true,
+      "question": "ФИО секретаря протокола?", "example": "Петрова А. С." }
+  ]
+}

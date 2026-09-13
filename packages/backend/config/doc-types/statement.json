@@ -1,0 +1,15 @@
+{
+  "id": "statement",
+  "name": "Заявление",
+  "hint": "Заявление физического или юридического лица",
+  "docTitle": "ЗАЯВЛЕНИЕ",
+  "layout": ["orgHeader", "dateNumber", "title", "body", "signature"],
+  "structureHint": "Изложите суть заявления, укажите основание (статью, пункт) при необходимости.",
+  "fields": [
+    { "key": "Дата", "label": "Дата", "kind": "auto", "required": true },
+    { "key": "Адресат", "label": "Адресат", "kind": "extract", "required": false,
+      "question": "Кому адресовано заявление?", "example": "Генеральному директору" },
+    { "key": "ФИО заявителя", "label": "ФИО заявителя", "kind": "extract", "required": true,
+      "question": "Ваши фамилия и инициалы?", "example": "Козлов М. В." }
+  ]
+}

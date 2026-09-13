@@ -1,0 +1,18 @@
+{
+  "id": "order",
+  "name": "Приказ",
+  "hint": "Распоряжение руководителя организации: утверждение, назначение, увольнение",
+  "docTitle": "ПРИКАЗ",
+  "layout": ["orgHeader", "docTitle", "dateNumber", "title", "body", "approvalBlock", "signature", "copyBlock"],
+  "structureHint": "Изложите основание приказа, затем распорядительную часть (пункты), затем исполнителей и сроки.",
+  "fields": [
+    { "key": "Дата", "label": "Дата", "kind": "auto", "required": true },
+    { "key": "Номер", "label": "Регистрационный номер", "kind": "registry", "required": true,
+      "question": "Регистрационный номер приказа?", "example": "42" },
+    { "key": "Тема", "label": "Тема", "kind": "derived", "required": true },
+    { "key": "ФИО руководителя", "label": "ФИО руководителя", "kind": "extract", "required": true,
+      "question": "ФИО руководителя, издающего приказ?", "example": "Иванов И. И." },
+    { "key": "Должность руководителя", "label": "Должность руководителя", "kind": "extract", "required": true,
+      "question": "Должность руководителя?", "example": "Генеральный директор" }
+  ]
+}

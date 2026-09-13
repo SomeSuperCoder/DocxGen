@@ -49,9 +49,9 @@ describe('loadDocTypes', () => {
 
   it('returns a Map with correct IDs', () => {
     const list = catalog.list();
-    expect(list.length).toBe(5);
+    expect(list.length).toBe(9);
     const ids = list.map((d) => d.id).sort();
-    expect(ids).toEqual(['explanatory-note', 'letter', 'memo', 'reference', 'report']);
+    expect(ids).toEqual(['act', 'explanatory-note', 'letter', 'memo', 'order', 'protocol', 'reference', 'report', 'statement']);
   });
 
   it('get() returns the correct doc type', () => {
