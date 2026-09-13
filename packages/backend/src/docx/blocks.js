@@ -1,5 +1,5 @@
-import { Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, UnderlineType } from 'docx';
-import { mm, halfPt } from './units.js';
+import { Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, TableLayoutType, VerticalAlign, BorderStyle, UnderlineType } from 'docx';
+import { mm, pt, halfPt } from './units.js';
 import { parseRichText } from './richText.js';
 
 /**
@@ -48,8 +48,9 @@ export function valueRuns(model, key) {
  * Organization header — name, INN/KPP/OGRN (ГОСТ), and address/phone from template.
  * For 'modern' template: empty (org is in the header).
  *
- * ГОСТ format:
- *   [Название организации]
+ * ГОСТ format (one paragraph per line; the author's position lives in the signature block):
+ *   Организация (if set)
+ *   [Подразделение]
  *   ИНН: [ИНН] КПП: [КПП] ОГРН: [ОГРН]
  *   [Адрес] [Телефон]
  */
@@ -58,45 +59,34 @@ function orgHeader(model) {
   const cfg = t.blocks.orgHeader;
   if (!cfg.show) return [];
 
-  const runs = [];
-  runs.push(new TextRun({ text: t.organization.name, bold: cfg.bold }));
+  // Each requisite is its own paragraph: a "\n" inside a run is not a line break in Word.
+  // Organization name: requisite value > template blank. There is no UI field for it,
+  // so a missing name is left out instead of becoming a [placeholder] nobody can fill.
+  const lines = [];
+  const orgName = model.values['Организация']?.value || t.organization?.name;
+  if (orgName) lines.push([new TextRun({ text: orgName, bold: cfg.bold })]);
 
   // ГОСТ requisite 06: наименование структурного подразделения (if present)
   const subdivision = model.values['Наименование подразделения']?.value;
-  if (subdivision) {
-    runs.push(new TextRun({ text: `\n${subdivision}`, bold: cfg.bold }));
-  }
+  if (subdivision) lines.push([new TextRun({ text: subdivision, bold: cfg.bold })]);
 
-  // ГОСТ requisite 07: наименование должности лица-автора (if present)
-  const position = model.values['Должность автора']?.value;
-  if (position) {
-    runs.push(new TextRun({ text: `\n${position}`, bold: cfg.bold }));
-  }
-
-  // ГОСТ: render ИНН/КПП/ОГРН if any are present in the organization object
-  const inn = t.organization.inn;
-  const kpp = t.organization.kpp;
-  const ogrn = t.organization.ogrn;
-  if (inn || kpp || ogrn) {
-    const idParts = [];
-    if (inn) idParts.push(`ИНН: ${inn}`);
-    if (kpp) idParts.push(`КПП: ${kpp}`);
-    if (ogrn) idParts.push(`ОГРН: ${ogrn}`);
-    runs.push(new TextRun({ text: `\n${idParts.join(' ')}`, bold: cfg.bold }));
-  }
+  // ГОСТ: ИНН/КПП/ОГРН if any are present in the organization object
+  const { inn, kpp, ogrn } = t.organization ?? {};
+  const idParts = [];
+  if (inn) idParts.push(`ИНН: ${inn}`);
+  if (kpp) idParts.push(`КПП: ${kpp}`);
+  if (ogrn) idParts.push(`ОГРН: ${ogrn}`);
+  if (idParts.length > 0) lines.push([new TextRun({ text: idParts.join(' '), bold: cfg.bold })]);
 
   // Address and phone on the same line (ГОСТ: [Адрес] [Телефон])
-  const contactParts = [];
-  if (t.organization.address) contactParts.push(t.organization.address);
-  if (t.organization.phone) contactParts.push(t.organization.phone);
-  if (contactParts.length > 0) {
-    runs.push(new TextRun({ text: `\n${contactParts.join(' ')}`, bold: cfg.bold }));
-  }
+  const contacts = [t.organization?.address, t.organization?.phone].filter(Boolean);
+  if (contacts.length > 0) lines.push([new TextRun({ text: contacts.join(' '), bold: cfg.bold })]);
 
-  return [new Paragraph({
+  return lines.map((children, i) => new Paragraph({
     alignment: ALIGN[cfg.align],
-    children: runs,
-  })];
+    spacing: i === lines.length - 1 ? { after: pt(12) } : undefined,
+    children,
+  }));
 }
 
 /**
@@ -112,28 +102,24 @@ function addressee(model) {
 
   if (cfg.position === 'right') {
     // Table without borders, two columns
-    const cells = [
-      new TableCell({ children: [new Paragraph({ children: [] })], borders: noBorders() }),
-      new TableCell({
-        width: { size: cfg.widthPercent, type: WidthType.PERCENTAGE },
-        children: isLetter ? letterAddresseeParas(model) : [new Paragraph({ children: valueRuns(model, 'Адресат') })],
-        borders: noBorders(),
-      }),
-    ];
-    return [new Table({ rows: [new TableRow({ children: cells })] })];
+    const right = cfg.widthPercent || 45;
+    return [layoutTable([
+      { percent: 100 - right, children: [new Paragraph({ children: [] })] },
+      { percent: right, children: isLetter ? letterAddresseeParas(model, AlignmentType.RIGHT) : [new Paragraph({ alignment: AlignmentType.RIGHT, children: valueRuns(model, 'Адресат') })] },
+    ]), spacer()];
   }
 
   // position === 'left': plain paragraphs, no indent
-  if (isLetter) return letterAddresseeParas(model);
-  return [new Paragraph({ children: valueRuns(model, 'Адресат') })];
+  if (isLetter) return [...letterAddresseeParas(model), spacer()];
+  return [new Paragraph({ children: valueRuns(model, 'Адресат') }), spacer()];
 }
 
 /** Letter-specific addressee: three separate paragraphs. */
-function letterAddresseeParas(model) {
+function letterAddresseeParas(model, alignment) {
   return [
-    new Paragraph({ children: valueRuns(model, 'Организация адресата') }),
-    new Paragraph({ children: valueRuns(model, 'Лицо адресата') }),
-    new Paragraph({ children: valueRuns(model, 'Адрес адресата') }),
+    new Paragraph({ alignment, children: valueRuns(model, 'Организация адресата') }),
+    new Paragraph({ alignment, children: valueRuns(model, 'Лицо адресата') }),
+    new Paragraph({ alignment, children: valueRuns(model, 'Адрес адресата') }),
   ];
 }
 
@@ -148,6 +134,7 @@ function docTitle(model) {
   const cfg = model.template.blocks.docTitle;
   return [new Paragraph({
     alignment: ALIGN[cfg.align],
+    spacing: { before: pt(6), after: pt(6) },
     children: [new TextRun({ text: dt.docTitle, bold: cfg.bold })],
   })];
 }
@@ -168,32 +155,21 @@ function dateNumber(model, prefix = '№') {
     : [new TextRun('от '), ...valueRuns(model, 'Дата')];
   // ГОСТ: prefix is configurable — letters use "Исх." (outgoing), others use "№".
   const numberParaRuns = model.values['Номер']?.value
-    ? [new TextRun(` ${prefix} ${model.values['Номер'].value}`)]
-    : [new TextRun(` ${prefix} `), ...valueRuns(model, 'Номер')];
+    ? [new TextRun(`${prefix} ${model.values['Номер'].value}`)]
+    : [new TextRun(`${prefix} `), ...valueRuns(model, 'Номер')];
 
   if (cfg.layout === 'row') {
-    return [new Table({
-      rows: [new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ children: dateRuns })],
-            borders: noBorders(),
-          }),
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ children: numberParaRuns })],
-            borders: noBorders(),
-          }),
-        ],
-      })],
-    })];
+    return [layoutTable([
+      { percent: 50, children: [new Paragraph({ children: dateRuns })] },
+      { percent: 50, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: numberParaRuns })] },
+    ]), spacer()];
   }
 
   // stack layout
   return [
     new Paragraph({ children: dateRuns }),
     new Paragraph({ children: numberParaRuns }),
+    spacer(),
   ];
 }
 
@@ -204,7 +180,9 @@ function title(model) {
   const cfg = model.template.blocks.title;
   // Some providers (mock) already return a title prefixed with "О " — do not double it.
   // Also skip generic/fallback titles like "Документ" that produce meaningless "О Документ".
-  const raw = model.title?.trim();
+  // The subject (Тема) is what the user sees and edits, so it wins over the stored AI title.
+  const subject = model.values['Тема']?.value?.trim();
+  const raw = subject || model.title?.trim();
   const isGeneric = !raw || /^документ$/i.test(raw);
   let titleText;
   if (isGeneric) {
@@ -213,14 +191,17 @@ function title(model) {
     // Already has "О " — enforce Prepositional case on the first word after "О "
     titleText = enforcePrepositional(raw);
   } else {
-    // No "О " prefix — add it and enforce Prepositional case
-    titleText = enforcePrepositional(`О ${raw}`);
+    // No "О " prefix — add it and enforce Prepositional case; the subject's capital goes lower
+    // («Закупка мониторов» → «О закупке мониторов»), abbreviations like «ГОСТ» stay as they are
+    const lowered = /^\p{Lu}\p{Ll}/u.test(raw) ? raw[0].toLowerCase() + raw.slice(1) : raw;
+    titleText = enforcePrepositional(`О ${lowered}`);
   }
   const runs = titleText
     ? [new TextRun({ text: titleText, bold: cfg.bold, italics: cfg.italic })]
     : [new TextRun({ text: 'О ', bold: cfg.bold, italics: cfg.italic }), ...valueRuns(model, 'Тема')];
   return [new Paragraph({
     alignment: ALIGN[cfg.align],
+    spacing: { after: pt(12) },
     children: runs,
   })];
 }
@@ -291,38 +272,24 @@ function signature(model) {
   const nameKey = isLetter ? 'ФИО подписывающего' : 'ФИО автора';
   const cfg = model.template.blocks.signature;
 
-  // ГОСТ: underlined line for wet signature
-  const underlineRun = new TextRun({
-    text: '____________________',
-    underline: { type: UnderlineType.SINGLE },
-  });
+  // ГОСТ: space for the handwritten signature between position and name. 12 characters fit the
+  // 25% column of the row layout; a longer line wraps and prints a second, short stroke.
+  const signatureLine = () => new TextRun({ text: '____________', underline: { type: UnderlineType.SINGLE } });
 
   if (cfg.layout === 'row') {
-    return [new Table({
-      rows: [new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [
-              new Paragraph({ children: valueRuns(model, posKey) }),
-              new Paragraph({ children: [underlineRun] }),
-            ],
-            borders: noBorders(),
-          }),
-          new TableCell({
-            width: { size: 50, type: WidthType.PERCENTAGE },
-            children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: valueRuns(model, nameKey) })],
-            borders: noBorders(),
-          }),
-        ],
-      })],
-    })];
+    // ГОСТ Р 7.0.97: должность слева, личная подпись посередине, расшифровка справа — в одну строку
+    return [spacer(), layoutTable([
+      { percent: 45, children: [new Paragraph({ children: valueRuns(model, posKey) })] },
+      { percent: 25, children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [signatureLine()] })] },
+      { percent: 30, children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: valueRuns(model, nameKey) })] },
+    ], { verticalAlign: VerticalAlign.BOTTOM })];
   }
 
   // stack layout
   return [
+    spacer(),
     new Paragraph({ children: valueRuns(model, posKey) }),
-    new Paragraph({ children: [underlineRun] }),
+    new Paragraph({ children: [signatureLine()] }),
     new Paragraph({ children: valueRuns(model, nameKey) }),
   ];
 }
@@ -516,10 +483,42 @@ function copyBlock(model) {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Returns zero-width border config for borderless table cells. */
+/** Border config with every edge switched off. */
 function noBorders() {
-  const b = { style: 'none', size: 0, color: 'FFFFFF' };
+  const b = { style: BorderStyle.NONE, size: 0, color: 'auto' };
   return { top: b, bottom: b, left: b, right: b };
+}
+
+/** Empty paragraph that separates requisite blocks. */
+function spacer() {
+  return new Paragraph({ children: [] });
+}
+
+/**
+ * Invisible layout table stretched to the text width. Word and LibreOffice collapse tables
+ * with auto width, so the table and each column get explicit sizes and a fixed layout.
+ *
+ * @param {{ percent: number, children: Paragraph[] }[]} columns
+ * @param {{ verticalAlign?: string }} [options]
+ */
+function layoutTable(columns, { verticalAlign } = {}) {
+  const none = { style: BorderStyle.NONE, size: 0, color: 'auto' };
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+    // gridCol in twips for a 165 mm text column; Word rescales them to the 100% width
+    columnWidths: columns.map((c) => Math.round(9360 * c.percent / 100)),
+    borders: { ...noBorders(), insideHorizontal: none, insideVertical: none },
+    rows: [new TableRow({
+      children: columns.map((c) => new TableCell({
+        width: { size: c.percent, type: WidthType.PERCENTAGE },
+        margins: { left: 0, right: 0 },
+        verticalAlign,
+        borders: noBorders(),
+        children: c.children,
+      })),
+    })],
+  });
 }
 
 // ── Layout builder ─────────────────────────────────────────────────────────

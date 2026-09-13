@@ -333,6 +333,21 @@ describe('DocumentService', () => {
       expect(doc.version.kind).toBe('manual');
       expect(doc.version.title).toBe('Manual Title');
     });
+
+    it('keeps the AI title and requisites when the edit sends a generic title, and drops markup', () => {
+      service.saveVersion({
+        documentId: docId, draftVersion: 1, docType: 'memo', kind: 'ai',
+        title: 'О закупке мониторов', body: ['Текст'],
+        aiFields: { 'Адресат': { value: 'Директору Иванову И. И.', quote: 'директору иванову' } },
+        changes: [], warnings: [],
+      });
+      service.markProcessed(docId);
+
+      const doc = service.setManualText(owner, docId, { title: 'Документ', body: ['<b>Прошу</b> выделить'] });
+      expect(doc.version.title).toBe('О закупке мониторов');
+      expect(doc.version.body).toEqual(['Прошу выделить']);
+      expect(doc.version.aiFields['Адресат'].value).toBe('Директору Иванову И. И.');
+    });
   });
 
   // ── Save Version ────────────────────────────────────────────────────────────

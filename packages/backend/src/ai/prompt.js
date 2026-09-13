@@ -55,6 +55,14 @@ export function buildMessages({ draft, template, docType }) {
 
   const fieldKeyInstructions = buildFieldKeyInstructions(docType);
 
+  // Пример блока fields с настоящими ключами типа — иначе модели придумывают свои (addressee, authorName).
+  const exampleEntries = docType.fields
+    .filter(f => f.kind === 'extract' || f.kind === 'derived')
+    .map(f => f.kind === 'extract'
+      ? `    ${JSON.stringify(f.key)}: { "value": "Нормализованное значение", "quote": "Точная цитата из черновика" } или null`
+      : `    ${JSON.stringify(f.key)}: { "value": "Значение, составленное по тексту", "quote": null } или null`);
+  const fieldsJsonExample = exampleEntries.length ? `{\n${exampleEntries.join(',\n')}\n  }` : '{}';
+
   // Merge template.requiredFields (strings) with docType.fields (objects) → unique by label
   const existingLabels = new Set();
   if (template?.requiredFields) {
@@ -81,6 +89,7 @@ export function buildMessages({ draft, template, docType }) {
     .replaceAll('{{structureHint}}', safeStructureHint)
     .replaceAll('{{fieldsList}}', fieldsList)
     .replaceAll('{{fieldKeyInstructions}}', fieldKeyInstructions)
+    .replaceAll('{{fieldsJsonExample}}', fieldsJsonExample)
     .replaceAll('{{existingPlaceholders}}', existingPlaceholdersSection);
 
   return [

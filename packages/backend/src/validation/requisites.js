@@ -79,6 +79,11 @@ export function mergeRequisites({ docType, template, aiFields, title, userFields
       value = template.organization?.[fieldKey] ?? null;
       source = 'template';
     }
+    // Priority 6: organization name printed on the template blank
+    else if (fieldKey === 'Организация' && template.organization?.name) {
+      value = template.organization.name;
+      source = 'template';
+    }
 
     // Handle title specially — userFields.title first, then AI title
     // Key is "Заголовок" (or whatever the Russian label for title is)
@@ -106,7 +111,7 @@ export function mergeRequisites({ docType, template, aiFields, title, userFields
 
     if (isRegistry) {
       // Registry fields never go to pending — always show as placeholder
-      placeholders.push(field.label);
+      if (!hasValue) placeholders.push(field.label);
     } else if (!hasValue && !isSkipped && field.required) {
       // Required field without value and not skipped → ask user
       pending.push({
@@ -115,8 +120,10 @@ export function mergeRequisites({ docType, template, aiFields, title, userFields
         question: field.question || `Укажите: ${field.label}`,
         example: field.example || '',
       });
-    } else if (!hasValue && !field.required) {
-      // Optional field without value → placeholder
+      // …and until answered it is a highlighted [Label] in the DOCX
+      placeholders.push(field.label);
+    } else if (!hasValue) {
+      // Optional or skipped field without value → placeholder
       placeholders.push(field.label);
     }
   }

@@ -48,7 +48,6 @@ describe('Group 1 — Все 5 шаблонов/doctype рендерят orgHead
       orgOverrides: { name: 'ООО «Пример»', inn: '7701234567' },
     });
     expect(xml).toContain('ООО «Пример»');
-    expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
     expect(xml).toContain('ИНН: 7701234567');
   });
 
@@ -175,8 +174,8 @@ describe('Group 3 — Subdivision and Position rendering', () => {
       expect(xml).toContain('Подразделение автора');
     });
 
-    it(`${docTypeId}+${templateId}: renders position`, async () => {
-      // orgHeader reads model.values['Должность автора']?.value (field key)
+    it(`${docTypeId}+${templateId}: does not repeat the author position in the header`, async () => {
+      // The position belongs to the signature block; in the header it duplicated it
       const xml = await getDocXml({
         docTypeId,
         templateId,
@@ -185,7 +184,8 @@ describe('Group 3 — Subdivision and Position rendering', () => {
           'Должность автора': 'Должность руководителя',
         },
       });
-      expect(xml).toContain('Должность руководителя');
+      const occurrences = xml.split('Должность руководителя').length - 1;
+      expect(occurrences).toBeLessThanOrEqual(1);
     });
   }
 });

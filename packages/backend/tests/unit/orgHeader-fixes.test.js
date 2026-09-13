@@ -60,7 +60,7 @@ describe('FIX 1: modern.json orgHeader.show = true', () => {
 
   it('orgHeader block is NOT empty when rendering with modern template', () => {
     const model = buildModel({
-      template: modernTemplate,
+      template: { ...modernTemplate, organization: { ...modernTemplate.organization, name: 'ООО «Пример»' } },
       values: {
         'Наименование подразделения': { value: null, label: 'Подразделение', source: 'ai' },
       },
@@ -74,7 +74,7 @@ describe('FIX 1: modern.json orgHeader.show = true', () => {
 
 // ── FIX 2: orgHeader renders subdivision and position ────────────────────────
 
-describe('FIX 2: orgHeader renders subdivision (06) and position (07)', () => {
+describe('FIX 2: orgHeader renders subdivision (06); position (07) stays in the signature', () => {
   it('renders subdivision after org name when present', () => {
     const model = buildModel({
       template: classicTemplate,
@@ -83,12 +83,12 @@ describe('FIX 2: orgHeader renders subdivision (06) and position (07)', () => {
       },
     });
     const result = BLOCKS.orgHeader(model);
+    // One paragraph per requisite line; the template blank has no organization name
     expect(result.length).toBe(1);
-    const allText = extractParagraphText(result[0]);
-    expect(allText).toContain('Отдел закупок');
+    expect(extractParagraphText(result[0])).toBe('Отдел закупок');
   });
 
-  it('renders position after subdivision when present', () => {
+  it('keeps the author position out of the header (it is printed in the signature)', () => {
     const model = buildModel({
       template: classicTemplate,
       values: {
@@ -97,22 +97,21 @@ describe('FIX 2: orgHeader renders subdivision (06) and position (07)', () => {
       },
     });
     const result = BLOCKS.orgHeader(model);
-    const allText = extractParagraphText(result[0]);
-    expect(allText).toContain('Ведущий специалист');
+    const allText = result.map(extractParagraphText).join(' | ');
+    expect(allText).not.toContain('Ведущий специалист');
     expect(allText).toContain('Отдел закупок');
   });
 
   it('renders only org name + address when subdivision and position are absent', () => {
+    const organization = { name: 'ООО «Пример»', address: 'г. Казань, ул. Баумана, д. 5' };
     const model = buildModel({
-      template: classicTemplate,
+      template: { ...classicTemplate, organization },
       values: {},
     });
     const result = BLOCKS.orgHeader(model);
-    const allText = extractParagraphText(result[0]);
-    // Should contain org name from template
-    expect(allText).toContain(classicTemplate.organization.name);
-    // Should contain address
-    expect(allText).toContain(classicTemplate.organization.address);
+    // One paragraph per line: organization name, then address
+    expect(result.map(extractParagraphText)).toEqual([organization.name, organization.address]);
+    const allText = result.map(extractParagraphText).join(' | ');
     // Should NOT contain subdivision or position values
     expect(allText).not.toContain('Отдел закупок');
     expect(allText).not.toContain('Ведущий специалист');
@@ -231,9 +230,14 @@ describe('Combination tests: layout validity for all docType × template', () =>
         });
 
         it('orgHeader renders when show=true', () => {
-          const model = buildModel({ docType, template, values: {} });
-          const result = BLOCKS.orgHeader(model);
+          const withOrg = { ...template, organization: { ...template.organization, name: 'ООО «Пример»' } };
+          const result = BLOCKS.orgHeader(buildModel({ docType, template: withOrg, values: {} }));
           expect(result.length).toBeGreaterThan(0);
+        });
+
+        it('orgHeader leaves out an organization that is not set', () => {
+          const result = BLOCKS.orgHeader(buildModel({ docType, template: { ...template, organization: { name: '' } }, values: {} }));
+          expect(result).toHaveLength(0);
         });
       });
     }

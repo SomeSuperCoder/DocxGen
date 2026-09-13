@@ -38,9 +38,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   describe('classic + memo', () => {
     const combo = { docTypeId: 'memo', templateId: 'classic', values: {} };
 
-    it('renders orgHeader', async () => {
+    it('renders no sample organization data in orgHeader', async () => {
       const xml = await getDocXml('memo', 'classic');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('renders addressee block', async () => {
@@ -97,9 +97,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Classic Report ────────────────────────────────────────────────────────
 
   describe('classic + report', () => {
-    it('renders orgHeader', async () => {
+    it('renders no sample organization data in orgHeader', async () => {
       const xml = await getDocXml('report', 'classic');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('renders addressee block', async () => {
@@ -154,9 +154,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Classic Reference ─────────────────────────────────────────────────────
 
   describe('classic + reference', () => {
-    it('renders orgHeader', async () => {
+    it('renders no sample organization data in orgHeader', async () => {
       const xml = await getDocXml('reference', 'classic');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('renders addressee block', async () => {
@@ -208,9 +208,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Classic Letter ────────────────────────────────────────────────────────
 
   describe('classic + letter', () => {
-    it('renders orgHeader', async () => {
+    it('renders no sample organization data in orgHeader', async () => {
       const xml = await getDocXml('letter', 'classic');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('renders addressee (3 paragraphs for letter)', async () => {
@@ -273,9 +273,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Modern Memo ───────────────────────────────────────────────────────────
 
   describe('modern + memo', () => {
-    it('renders orgHeader in body', async () => {
+    it('renders no sample organization data in body', async () => {
       const xml = await getDocXml('memo', 'modern');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('renders addressee as plain paragraphs (no table)', async () => {
@@ -333,9 +333,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Modern Report ─────────────────────────────────────────────────────────
 
   describe('modern + report', () => {
-    it('renders orgHeader in body', async () => {
+    it('renders no sample organization data in body', async () => {
       const xml = await getDocXml('report', 'modern');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('renders addressee as plain paragraphs (no table)', async () => {
@@ -388,9 +388,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Modern Reference ──────────────────────────────────────────────────────
 
   describe('modern + reference', () => {
-    it('renders orgHeader in body', async () => {
+    it('renders no sample organization data in body', async () => {
       const xml = await getDocXml('reference', 'modern');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('renders addressee block', async () => {
@@ -442,9 +442,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Modern Letter ─────────────────────────────────────────────────────────
 
   describe('modern + letter', () => {
-    it('renders orgHeader in body', async () => {
+    it('renders no sample organization data in body', async () => {
       const xml = await getDocXml('letter', 'modern');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('renders addressee (3 paragraphs for letter)', async () => {
@@ -759,10 +759,10 @@ describe('Test Group 2 — Field Rendering Verification', () => {
 
 describe('Test Group 3 — ГОСТ Formatting Elements', () => {
   describe('classic template ГОСТ', () => {
-    it('orgHeader contains organization address', async () => {
+    it('orgHeader prints no sample address or phone when the blank has none', async () => {
       const xml = await getDocXml('memo', 'classic');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
-      expect(xml).toContain('+7 (000) 000-00-00');
+      expect(xml).not.toContain('Примерная');
+      expect(xml).not.toContain('+7 (000) 000-00-00');
     });
 
     it('addressee is in a table (right-aligned)', async () => {
@@ -788,8 +788,8 @@ describe('Test Group 3 — ГОСТ Formatting Elements', () => {
         'Должность автора': 'Инженер',
         'ФИО автора': 'Петров П. П.',
       });
-      // ГОСТ: underlined line for wet signature (____________________)
-      expect(xml).toContain('____________________');
+      // ГОСТ: underlined line for wet signature (12 underscores — fits the signature column)
+      expect(xml).toContain('>____________<');
       expect(xml).toContain('<w:u w:val="single"/>');
     });
 
@@ -823,9 +823,9 @@ describe('Test Group 3 — ГОСТ Formatting Elements', () => {
   });
 
   describe('modern template ГОСТ', () => {
-    it('renders orgHeader in body', async () => {
+    it('renders no sample organization data in body', async () => {
       const xml = await getDocXml('memo', 'modern');
-      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).not.toContain('Примерная');
     });
 
     it('addressee as plain paragraphs (no table)', async () => {
@@ -870,7 +870,7 @@ describe('Test Group 3 — ГОСТ Formatting Elements', () => {
         'Должность автора': 'Инженер',
         'ФИО автора': 'Петров П. П.',
       });
-      expect(xml).toContain('____________________');
+      expect(xml).toContain('>____________<');
       expect(xml).toContain('<w:u w:val="single"/>');
     });
   });

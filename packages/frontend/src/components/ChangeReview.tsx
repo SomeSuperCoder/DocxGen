@@ -8,16 +8,69 @@ interface ChangeReviewProps {
   changes?: string[];
 }
 
-function diffWords(source: string, corrected: string) {
-  const before = source.split(/(\s+)/);
-  const after = corrected.split(/(\s+)/);
-  const result: Array<{ kind: 'same' | 'added' | 'removed'; text: string }> = [];
+type DiffToken = { kind: 'same' | 'added' | 'removed' | 'space'; text: string };
+
+/** Above this many word pairs the LCS table gets too heavy for the browser — show the result without marks. */
+const MAX_DIFF_CELLS = 4_000_000;
+
+/**
+ * Word-level diff built on the longest common subsequence, so an inserted or removed word
+ * does not shift every following word into a removed/added pair. Changed words are grouped
+ * into runs («было» → «стало») and whitespace is never highlighted.
+ */
+function diffWords(source: string, corrected: string): DiffToken[] {
+  // Line breaks are tokens too, so paragraphs survive; other whitespace only separates words.
+  const before = source.match(/\n|[^\s]+/g) ?? [];
+  const after = corrected.match(/\n|[^\s]+/g) ?? [];
+  if (before.length * after.length > MAX_DIFF_CELLS) return [{ kind: 'same', text: corrected }];
+
+  const cols = after.length + 1;
+  const lcs = new Uint16Array((before.length + 1) * cols);
+  for (let i = before.length - 1; i >= 0; i -= 1) {
+    for (let j = after.length - 1; j >= 0; j -= 1) {
+      lcs[i * cols + j] = before[i] === after[j]
+        ? lcs[(i + 1) * cols + j + 1] + 1
+        : Math.max(lcs[(i + 1) * cols + j], lcs[i * cols + j + 1]);
+    }
+  }
+
+  const words: Array<{ kind: 'same' | 'added' | 'removed'; text: string }> = [];
   let i = 0; let j = 0;
   while (i < before.length || j < after.length) {
-    if (before[i] === after[j]) { if (after[j] !== undefined) result.push({ kind: 'same', text: after[j] }); i++; j++; continue; }
-    if (after[j] !== undefined) result.push({ kind: 'added', text: after[j++] });
-    if (before[i] !== undefined && (j >= after.length || before[i] !== after[j])) result.push({ kind: 'removed', text: before[i++] });
+    if (i < before.length && j < after.length && before[i] === after[j]) {
+      words.push({ kind: 'same', text: after[j] }); i += 1; j += 1;
+    } else if (j < after.length && (i >= before.length || lcs[i * cols + j + 1] >= lcs[(i + 1) * cols + j])) {
+      words.push({ kind: 'added', text: after[j] }); j += 1;
+    } else {
+      words.push({ kind: 'removed', text: before[i] }); i += 1;
+    }
   }
+
+  // Inside one changed stretch show everything removed first, then everything added.
+  const result: DiffToken[] = [];
+  const push = (token: DiffToken) => {
+    const last = result[result.length - 1];
+    if (last && last.text !== '\n' && token.text !== '\n') result.push({ kind: 'space', text: ' ' });
+    result.push(token);
+  };
+  let removed: string[] = []; let added: string[] = [];
+  const flush = () => {
+    if (removed.length) push({ kind: 'removed', text: removed.join(' ') });
+    if (added.length) push({ kind: 'added', text: added.join(' ') });
+    removed = []; added = [];
+  };
+  for (const word of words) {
+    if (word.text === '\n') {
+      // A removed line break is just gone; an added one breaks the line without a highlight
+      if (word.kind !== 'removed') { flush(); result.push({ kind: 'space', text: '\n' }); }
+      continue;
+    }
+    if (word.kind === 'removed') { removed.push(word.text); continue; }
+    if (word.kind === 'added') { added.push(word.text); continue; }
+    flush();
+    push(word);
+  }
+  flush();
   return result;
 }
 

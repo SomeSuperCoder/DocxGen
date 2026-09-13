@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { mergeRequisites } from '../validation/requisites.js';
+import { stripMarkup } from '../validation/normalize.js';
 import { DomainError } from './errors.js';
 import { normalizeRussianRequisite } from '../features/killer.js';
 
@@ -395,11 +396,19 @@ export function createDocumentService({ db, queue, fileStorage, docTypes, templa
       const doc = getDocByOwner.get(id, owner.platform, owner.id);
       ensureOwner(doc, owner);
 
+      // A text edit changes only the paragraphs: the title and the requisites found by the AI
+      // stay from the version being edited, otherwise the DOCX loses addressee/author/subject.
+      const previous = doc.current_version_id ? getVersion.get(doc.current_version_id) : null;
+      const cleanTitle = title ? stripMarkup(title) : '';
+      const keepTitle = !cleanTitle || /^документ$/i.test(cleanTitle);
+      const cleanBody = (body || []).map(stripMarkup).filter(Boolean);
+
       const versionId = crypto.randomUUID();
       insertVersion.run({
         id: versionId, documentId: id, draftVersion: doc.draft_version,
-        docType: doc.doc_type, kind: 'manual', title,
-        body: JSON.stringify(body), aiFields: '{}',
+        docType: doc.doc_type, kind: 'manual',
+        title: keepTitle ? (previous?.title ?? cleanTitle) : cleanTitle,
+        body: JSON.stringify(cleanBody), aiFields: previous?.ai_fields || '{}',
         changes: '[]', warnings: '[]', now: now(),
       });
 

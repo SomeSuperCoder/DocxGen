@@ -274,8 +274,8 @@ describe('DOCX generation — layout blocks', () => {
     const zip = await JSZip.loadAsync(buffer);
     const docXml = await zip.file('word/document.xml').async('string');
 
-    // orgHeader: organization address (name is now empty per ГОСТ compliance)
-    expect(docXml).toContain('г. Москва, ул. Примерная, д. 1');
+    // orgHeader: the template blank has no organization → no sample address in the document
+    expect(docXml).not.toContain('Примерная');
     // addressee
     expect(docXml).toContain('Начальнику');
     // docTitle
