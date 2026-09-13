@@ -1,12 +1,12 @@
 <div align="center">
 
-🇺🇦 [Русский](README.ru.md) | English
+🇷🇺 Русский | [English](README.en.md)
 
 # 📄 DocxGen
 
-**AI-powered Russian business document generator**
+**ИИ-генератор российских деловых документов**
 
-Generate ГОСТ-compliant DOCX documents from text drafts with AI-powered correction, field extraction, and professional formatting.
+Генерация документов ГОСТ в формате DOCX из текстовых черновиков с помощью ИИ-коррекции, извлечения полей и профессионального форматирования.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js 22](https://img.shields.io/badge/Node.js-22-green.svg)](https://nodejs.org/)
@@ -14,340 +14,353 @@ Generate ГОСТ-compliant DOCX documents from text drafts with AI-powered corr
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6-blue.svg)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React-19-cyan.svg)](https://react.dev/)
 [![Express 5](https://img.shields.io/badge/Express-5-red.svg)](https://expressjs.com/)
-[![Tests](https://img.shields.io/badge/tests-737-brightgreen.svg)](#-quick-start)
+[![Tests](https://img.shields.io/badge/tests-737-brightgreen.svg)](#-быстрый-старт)
 
 </div>
 
 ---
 
-## 🎯 Overview
+## 🎯 Обзор
 
-DocxGen is an AI-powered Russian business document generator designed for organizations that need to produce ГОСТ-compliant documents quickly and accurately.
+DocxGen — это ИИ-генератор российских деловых документов, предназначенный для организаций, которым необходимо быстро и точно создавать документы, соответствующие ГОСТ.
 
-**How it works:**
-1. User provides a text draft (via web UI, MAX bot, or VK bot)
-2. AI corrects spelling, grammar, and style
-3. System extracts required requisites (sender, recipient, date, etc.)
-4. DOCX file is rendered in ГОСТ-compliant format
-5. User downloads the finished document
+**Как это работает:**
+1. Пользователь предоставляет текстовый черновик (через веб-интерфейс, бот MAX или бот VK)
+2. ИИ исправляет орфографию, грамматику и стиль
+3. Система извлекает необходимые реквизиты (отправитель, получатель, дата и т.д.)
+4. DOCX-файл формируется в соответствии с ГОСТ
+5. Пользователь скачивает готовый документ
 
-**Key capabilities:**
-- 🤖 AI-powered text correction and field extraction
-- 📋 9 document types × 2 templates = 18 professional layouts
-- 🎙️ Russian speech recognition (Vosk)
-- 💬 Multi-channel: Web UI + MAX bot + VK bot
-- ✅ ГОСТ Р 7.0.97-2016 compliance checks
-- 📜 Version history with restore capability
-
----
-
-## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| **AI Text Correction** | Automatic spelling, grammar, and style improvements |
-| **Field Extraction** | AI extracts sender, recipient, date, subject from draft text |
-| **ГОСТ Compliance** | Automated checks against Russian state standard Р 7.0.97-2016 |
-| **Placeholder System** | Russian labels serve as field keys — intuitive for users |
-| **Field Grounding** | AI must quote source text for extracted fields — auditable |
-| **Version History** | Track all document versions with restore capability |
-| **Batch Processing** | Process up to 20 documents simultaneously |
-| **Speech Recognition** | Russian STT via Vosk — dictation to document |
-| **Multi-Channel** | Web UI, MAX messenger bot, VKontakte bot |
-| **File Caching** | Content-hash based deduplication |
-| **Auto Cleanup** | Configurable retention for files and logs |
+**Основные возможности:**
+- 🤖 ИИ-коррекция текста и извлечение полей
+- 📋 9 типов документов × 2 шаблона = 18 профессиональных макетов
+- 🎙️ Распознавание русской речи (Vosk)
+- 💬 Мультиканальность: веб-интерфейс + бот MAX + бот VK
+- ✅ Проверки соответствия ГОСТ Р 7.0.97-2016
+- 📜 История версий с возможностью восстановления
 
 ---
 
-## 🚀 Quick Start
+## ✨ Возможности
+
+| Возможность | Описание |
+|-------------|----------|
+| **ИИ-коррекция текста** | Автоматическое исправление орфографии, грамматики и стиля |
+| **Извлечение полей** | ИИ извлекает отправителя, получателя, дату, тему из текста черновика |
+| **Соответствие ГОСТ** | Автоматические проверки по российскому государственному стандарту Р 7.0.97-2016 |
+| **Система плейсхолдеров** | Русские названия служат ключами полей — интуитивно понятно для пользователей |
+| **Обоснование полей** | ИИ должен цитировать исходный текст для извлеченных полей — возможность аудита |
+| **История версий** | Отслеживание всех версий документа с возможностью восстановления |
+| **Пакетная обработка** | Обработка до 20 документов одновременно |
+| **Распознавание речи** | Распознавание русской речи через Vosk — диктовка документа |
+| **Мультиканальность** | Веб-интерфейс, бот MAX, бот VKontakte |
+| **Кэширование файлов** | Дедупликация на основе хеша содержимого |
+| **Автоматическая очистка** | Настраиваемое время хранения файлов и журналов |
+
+---
+
+## 🚀 Быстрый старт
 
 ```bash
-# 1. Install dependencies
+# 1. Установить зависимости
 pnpm install
 
-# 2. Configure environment (interactive wizard)
+# 2. Настроить окружение (интерактивный мастер)
 pnpm setup:env
 
-# 3. (Optional) Set up audio/speech recognition
+# 3. (Опционально) Настроить распознавание аудио/речи
 pnpm setup:audio
 
-# 4. Start development server
+# 4. Запустить сервер разработки
 pnpm dev
 ```
 
-**Access the application:**
-- **Frontend:** http://localhost:5173 (Vite dev server)
+**Доступ к приложению:**
+- **Фронтенд:** http://localhost:5173 (сервер разработки Vite)
 - **Backend API:** http://localhost:3000
 
-The Vite dev server automatically proxies `/api` requests to the backend.
+Сервер разработки Vite автоматически проксирует запросы `/api` на backend.
 
 ---
 
-## ⚙️ Setup Scripts
+## ⚙️ Скрипты настройки
 
-### `pnpm setup:env` — Environment Configuration
+### `pnpm setup:env` — Настройка окружения
 
-Interactive `.env` configuration wizard. Run from project root:
+Интерактивный мастер настройки `.env`. Запуск из корня проекта:
 
 ```bash
 pnpm setup:env
 ```
 
-This launches an interactive CLI that walks you through:
+Запускает интерактивный CLI, который проведёт вас через:
 
-| Section | What It Configures |
-|---------|-------------------|
-| **Server** | Port, public URL, data directory, log level |
-| **AI Provider** | OpenAI, OpenCode CLI, or mock mode |
-| **AI Settings** | API keys, runtime, model selection |
-| **Bots** | MAX and VK integrations (optional) |
+| Раздел | Что настраивается |
+|--------|-------------------|
+| **Сервер** | Порт, публичный URL, каталог данных, уровень журнала |
+| **Провайдер ИИ** | OpenAI, OpenCode CLI или режим мока |
+| **Настройки ИИ** | API-ключи, среда выполнения, выбор модели |
+| **Боты** | Интеграции MAX и VK (опционально) |
 
-**Features:**
-- Creates `.env` file in project root
-- Can be re-run to update existing configuration
-- Validates inputs at each step
-- Provides sensible defaults
+**Возможности:**
+- Создаёт файл `.env` в корне проекта
+- Может быть перезапущен для обновления существующей конфигурации
+- Валидирует ввод на каждом шаге
+- Предоставляет разумные значения по умолчанию
 
-### `pnpm setup:audio` — Speech Recognition Service
+### `pnpm setup:audio` — Сервис распознавания речи
 
-Sets up the Vosk-based audio/speech recognition service:
+Настраивает сервис распознавания аудио/речи на базе Vosk:
 
 ```bash
 pnpm setup:audio
 ```
 
-**This script:**
-1. Checks for `ffmpeg` in PATH (required for audio processing)
-2. Creates Python virtual environment at `packages/backend/.venv-audio`
-3. Installs the `vosk` Python package
-4. Downloads the Russian Vosk model (`vosk-model-small-ru-0.22`) if not present
+**Этот скрипт:**
+1. Проверяет наличие `ffmpeg` в PATH (необходим для обработки аудио)
+2. Создаёт виртуальное окружение Python в `packages/backend/.venv-audio`
+3. Устанавливает Python-пакет `vosk`
+4. Скачивает русскую модель Vosk (`vosk-model-small-ru-0.22`), если она отсутствует
 
-**Prerequisites:**
-- Python 3.x installed
-- `ffmpeg` installed on system
+**Предварительные требования:**
+- Установленный Python 3.x
+- Установленный `ffmpeg` в системе
 
-**What it enables:**
-- Voice message transcription in Russian
-- Microphone dictation in the web UI
-- Audio processing for bot channels
+**Что это даёт:**
+- Транскрибация голосовых сообщений на русском языке
+- Диктовка через микрофон в веб-интерфейсе
+- Обработка аудио для каналов ботов
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Архитектура
 
 ```mermaid
 flowchart LR
-  WEB[Web application] --> API[HTTP API]
-  MAX[MAX adapter] --> FLOW[Dialog flow]
-  VK[VK adapter] --> FLOW
-  FLOW -. voice messages .-> STT[Audio service / Vosk]
-  API -. microphone .-> STT
-  API --> DOC[Document service]
+  WEB[Веб-приложение] --> API[HTTP API]
+  MAX[Адаптер MAX] --> FLOW[Диалоговый движок]
+  VK[Адаптер ВК] --> FLOW
+  FLOW -. голосовые .-> STT[Аудиосервис / Vosk]
+  API -. микрофон .-> STT
+  API --> DOC[Сервис документов]
   FLOW --> DOC
-  DOC --> Q[SQLite job queue]
-  Q --> W[Worker]
-  W --> AI[AI provider]
-  W --> VALIDATE[Requisites and grounding checks]
-  W --> DOCX[DOCX renderer]
+  DOC --> Q[Очередь задач SQLite]
+  Q --> W[Воркер]
+  W --> AI[Провайдер ИИ]
+  W --> VALIDATE[Проверка реквизитов и обоснований]
+  W --> DOCX[Рендерер DOCX]
   DOC --> DB[(SQLite)]
-  DOCX --> FILES[(File storage)]
+  DOCX --> FILES[(Файловое хранилище)]
 ```
 
-**Data flow:**
-1. User submits text via Web UI, MAX, or VK
-2. Document service creates a job in SQLite queue
-3. Worker processes job: AI corrects text → extracts fields → validates
-4. DOCX renderer generates ГОСТ-compliant document
-5. File stored and served to user
+**Поток данных:**
+1. Пользователь отправляет текст через веб-интерфейс, MAX или VK
+2. Сервис документов создаёт задачу в очереди SQLite
+3. Воркер обрабатывает задачу: ИИ корректирует текст → извлекает поля → проверяет
+4. Рендерер DOCX генерирует документ, соответствующий ГОСТ
+5. Файл сохраняется и передаётся пользователю
 
 ---
 
-## 📡 API Reference
+## 📡 Справочник API
 
-### Authentication
-Cookie-based identity — no login required. User identity is automatic.
+### Аутентификация
+Идентификация на основе cookies — вход не требуется. Идентификация пользователя автоматическая.
 
-### Endpoints
+### Эндпоинты
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Health check |
-| `GET` | `/api/catalog` | Available document types and templates |
-| `POST` | `/api/documents` | Create new document |
-| `POST` | `/api/documents/:id/process` | Start AI processing (async) |
-| `PATCH` | `/api/documents/:id` | Update document |
-| `PUT` | `/api/documents/:id/fields` | Set field values |
-| `POST` | `/api/documents/:id/render` | Render to DOCX |
-| `GET` | `/api/files/:fileId` | Download DOCX file |
-| `POST` | `/api/audio/transcribe` | Speech-to-text (Russian) |
-| `GET` | `/api/documents/:id/versions` | Version history |
-| `POST` | `/api/documents/:id/retry` | Retry after AI failure |
+| Метод | Эндпоинт | Описание |
+|--------|----------|----------|
+| `GET` | `/health` | Проверка работоспособности |
+| `GET` | `/api/catalog` | Доступные типы документов и шаблоны |
+| `POST` | `/api/documents` | Создание нового документа |
+| `POST` | `/api/documents/:id/process` | Запуск ИИ-обработки (асинхронно) |
+| `PATCH` | `/api/documents/:id` | Обновление документа |
+| `PUT` | `/api/documents/:id/fields` | Установка значений полей |
+| `POST` | `/api/documents/:id/render` | Рендеринг в DOCX |
+| `GET` | `/api/files/:fileId` | Скачивание DOCX-файла |
+| `POST` | `/api/audio/transcribe` | Преобразование речи в текст (русский) |
+| `GET` | `/api/documents/:id/versions` | История версий |
+| `POST` | `/api/documents/:id/retry` | Повторная попытка после сбоя ИИ |
 
-**Full API documentation:** [docs/api.md](docs/api.md)
-
----
-
-## 📑 Document Types
-
-| Type | Russian Name | Purpose |
-|------|--------------|---------|
-| **Memo** | Служебная записка | Internal memo between departments |
-| **Report** | Докладная записка | Report memo to management |
-| **Reference** | Информационная справка | Factual summary for audits/archives |
-| **Letter** | Письмо | Official organizational letter |
-| **Explanatory Note** | Пояснительная записка | Technical explanation or justification |
-| **Order** | Приказ | Executive order or directive |
-| **Protocol** | Протокол | Meeting minutes or resolution record |
-| **Act** | Акт | Completion report or verification record |
-| **Statement** | Заявление | Personal or organizational application |
-
-### Templates
-
-| Template | Russian Name | Style |
-|----------|--------------|-------|
-| **Classic** | Классический | Times New Roman 14pt, 1.5 line spacing, traditional corporate layout |
-| **Modern** | Современный | Arial 12pt, 1.15 line spacing, contemporary regulatory layout |
+**Полная документация API:** [docs/api.md](docs/api.md)
 
 ---
 
-## 🤖 AI Providers
+## 📑 Типы документов
 
-| Provider | API Key | Description |
-|----------|---------|-------------|
-| `opencode` | Not required | OpenCode CLI with free models |
-| `openai` | Required | OpenAI-compatible API (any provider) |
-| `mock` | Not required | No AI, deterministic output (for testing) |
+| Тип | Назначение |
+|-----|------------|
+| **Служебная записка** | Внутренняя записка между подразделениями |
+| **Докладная записка** | Докладная записка руководству |
+| **Информационная справка** | Фактическое резюме для проверок/архивов |
+| **Письмо** | Официальное письмо организации |
+| **Пояснительная записка** | Техническое пояснение или обоснование |
+| **Приказ** | Распоряжение или директива руководителя |
+| **Протокол** | Протокол собрания или запись решения |
+| **Акт** | Акт выполнения работ или проверки |
+| **Заявление** | Личное или организационное заявление |
 
-**Configuration:** Set `AI_PROVIDER` in `.env` file via `pnpm setup:env`.
+### Шаблоны
+
+| Шаблон | Стиль |
+|--------|-------|
+| **Классический** | Times New Roman 14pt, межстрочный интервал 1,5, традиционный корпоративный макет |
+| **Современный** | Arial 12pt, межстрочный интервал 1,15, современный нормативный макет |
 
 ---
 
-## 📁 Project Structure
+## 🤖 Провайдеры ИИ
+
+| Провайдер | API-ключ | Описание |
+|-----------|----------|----------|
+| `opencode` | Не требуется | OpenCode CLI со свободными моделями |
+| `openai` | Требуется | API, совместимый с OpenAI (любой провайдер) |
+| `mock` | Не требуется | Без ИИ, детерминированный вывод (для тестирования) |
+
+**Настройка:** задайте `AI_PROVIDER` в файле `.env` через `pnpm setup:env`.
+
+---
+
+## 📁 Структура проекта
 
 ```
 DocxGen/
 ├── packages/
-│   ├── backend/          # Express 5 API + document service
+│   ├── backend/          # Express 5 API + сервис документов
 │   │   ├── config/       # doc-types/*.json, templates/*.json
 │   │   └── src/
-│   │       ├── ai/       # AI pipeline (prompt, process, parse)
-│   │       ├── audio/    # Vosk STT client
-│   │       ├── core/     # documentService (lifecycle, render)
-│   │       ├── docx/     # OOXML blocks, render, units
-│   │       ├── jobs/     # Queue, worker
-│   │       ├── http/     # REST API routes
-│   │       ├── bot/      # Dialog flow state machine
-│   │       └── adapters/ # MAX, VK platform adapters
+│   │       ├── ai/       # ИИ-пайплайн (промпт, обработка, парсинг)
+│   │       ├── audio/    # Клиент Vosk STT
+│   │       ├── core/     # documentService (жизненный цикл, рендеринг)
+│   │       ├── docx/     # Блоки OOXML, рендеринг, единицы
+│   │       ├── jobs/     # Очередь, воркер
+│   │       ├── http/     # Маршруты REST API
+│   │       ├── bot/      # Конечный автомат диалога
+│   │       └── adapters/ # Адаптеры платформ MAX, VK
 │   └── frontend/         # React 19 + Vite + Tailwind
-├── scripts/              # Setup wizards (setup-env.js, setup-audio.mjs)
-├── prompts/              # AI system prompt (system.md)
-├── docs/                 # Architecture, API, templates, fields reference
-├── examples/             # Example documents
-├── Containerfile         # Docker/Podman build
-└── package.json          # Root workspace config
+├── scripts/              # Мастера настройки (setup-env.js, setup-audio.mjs)
+├── prompts/              # Системный промпт ИИ (system.md)
+├── docs/                 # Архитектура, API, шаблоны, справочник полей
+├── examples/             # Примеры документов
+├── Containerfile         # Сборка Docker/Podman
+└── package.json          # Корневая конфигурация рабочего пространства
 ```
 
----
+### README подпроектов
 
-## 🛠️ Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `pnpm install` | Install all dependencies |
-| `pnpm setup:env` | Interactive environment configuration |
-| `pnpm setup:audio` | Set up Vosk speech recognition |
-| `pnpm dev` | Start full development stack |
-| `pnpm start` | Start backend + audio (no frontend) |
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run test suite (Vitest) |
-| `pnpm typecheck` | Type-check all packages |
+| Подпроект | Описание |
+|-----------|----------|
+| [packages/frontend](packages/frontend/README.md) | Веб-версия и мини-приложение MAX (React + Vite) |
+| [packages/backend](packages/backend/README.md) | Единый backend: API, очередь, ИИ, DOCX, боты |
+| [adapters/max](packages/backend/src/adapters/max/README.md) | Адаптер чат-бота MAX (polling / webhook) |
+| [adapters/vk](packages/backend/src/adapters/vk/README.md) | Адаптер бота ВКонтакте (Long Poll / Callback API) |
+| [adapters/common](packages/backend/src/adapters/common/README.md) | Общие утилиты адаптеров |
+| [bot](packages/backend/src/bot/README.md) | Диалоговый движок, общий для всех мессенджеров |
+| [audio](packages/backend/src/audio/README.md) | Аудиосервис распознавания речи (Vosk + ffmpeg) |
+| [opencode](packages/backend/opencode/README.md) | Агент и образ OpenCode для ИИ-обработки |
 
 ---
 
-## 💬 Bot Setup
+## 🛠️ Доступные скрипты
 
-### MAX Bot (Russian Messenger)
-
-- **Local development:** Polling mode
-- **Production:** Webhook mode
-
-### VK Bot (VKontakte)
-
-- **Local development:** Long Poll mode
-- **Production:** Callback API mode
-
-**Detailed setup instructions:** [docs/bots-setup.md](docs/bots-setup.md)
-
----
-
-## ⚠️ Limitations
-
-| Limitation | Workaround |
-|------------|------------|
-| SQLite is local to `DATA_DIR` | Use persistent volume for deployment |
-| Polling modes for local dev only | Production needs HTTPS + webhook/callback |
-| Mock AI is deterministic | Use `opencode` or `openai` for real corrections |
-| OpenCode runtime requires CLI | Install OpenCode CLI or use containerized build |
-| Files cleaned up after retention period | Download files before cleanup |
+| Команда | Описание |
+|---------|----------|
+| `pnpm install` | Установка всех зависимостей |
+| `pnpm setup:env` | Интерактивная настройка окружения |
+| `pnpm setup:audio` | Настройка распознавания речи Vosk |
+| `pnpm dev` | Запуск полного стека разработки |
+| `pnpm start` | Запуск backend + аудио (без фронтенда) |
+| `pnpm build` | Сборка всех пакетов |
+| `pnpm test` | Запуск тестов (Vitest) |
+| `pnpm typecheck` | Проверка типов всех пакетов |
 
 ---
 
-## 📚 Documentation
+## 💬 Настройка ботов
 
-| Document | Description |
-|----------|-------------|
-| [Architecture](docs/architecture.md) | System design and data flow |
-| [REST API](docs/api.md) | Complete API reference |
-| [Document Generation](docs/document-generation.md) | How documents are created |
-| [Templates](docs/TEMPLATES.md) | Template system reference |
-| [Fields Reference](docs/FIELDS-REFERENCE.md) | All document fields |
-| [Placeholder Protocol](docs/PLACEHOLDER-PROTOCOL.md) | Placeholder system docs |
-| [AI Processing](docs/ai.md) | AI pipeline details |
-| [Audio Service](docs/audio-service.md) | Vosk STT integration |
-| [Bot Setup](docs/bots-setup.md) | MAX and VK bot configuration |
-| [Integration Guide](docs/integration-guide.md) | How to integrate with DocxGen |
-| [Adding Types/Templates](docs/adding-type-or-template.md) | Extend document types |
-| [Current Limitations](docs/limitations.md) | Known issues and constraints |
+### Бот MAX (российский мессенджер)
+
+- **Локальная разработка:** режим опроса (polling)
+- **Продакшн:** режим вебхуков
+
+### Бот VK (VKontakte)
+
+- **Локальная разработка:** режим Long Poll
+- **Продакшн:** режим Callback API
+
+**Подробные инструкции по настройке:** [docs/bots-setup.md](docs/bots-setup.md)
 
 ---
 
-## 🤝 Contributing
+## ⚠️ Ограничения
 
-Contributions are welcome! Please follow these steps:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-### Development Guidelines
-
-- Use `pnpm` as package manager (never npm/npx)
-- Follow existing code style
-- Add tests for new features
-- Update documentation as needed
+| Ограничение | Обходной путь |
+|-------------|---------------|
+| SQLite локален для `DATA_DIR` | Используйте постоянный том для развёртывания |
+| Режимы опроса только для локальной разработки | Продакшн требует HTTPS + вебхук/коллбэк |
+| Mock ИИ детерминирован | Используйте `opencode` или `openai` для реальных исправлений |
+| Среда выполнения OpenCode требует CLI | Установите OpenCode CLI или используйте контейнерную сборку |
+| Файлы удаляются после истечения срока хранения | Скачивайте файлы до очистки |
 
 ---
 
-## 📄 License
+## 📚 Документация
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+| Документ | Описание |
+|----------|----------|
+| [Архитектура](docs/architecture.md) | Проектирование системы и потоки данных |
+| [REST API](docs/api.md) | Полный справочник API |
+| [Генерация документов](docs/document-generation.md) | Как создаются документы |
+| [Шаблоны](docs/TEMPLATES.md) | Справочник системы шаблонов |
+| [Справочник полей](docs/FIELDS-REFERENCE.md) | Все поля документов |
+| [Протокол плейсхолдеров](docs/PLACEHOLDER-PROTOCOL.md) | Документация системы плейсхолдеров |
+| [ИИ-обработка](docs/ai.md) | Подробности ИИ-пайплайна |
+| [Аудио-сервис](docs/audio-service.md) | Интеграция Vosk STT |
+| [Настройка ботов](docs/bots-setup.md) | Конфигурация ботов MAX и VK |
+| [Руководство по интеграции](docs/integration-guide.md) | Как интегрироваться с DocxGen |
+| [Добавление типов/шаблонов](docs/adding-type-or-template.md) | Расширение типов документов |
+| [Текущие ограничения](docs/limitations.md) | Известные проблемы и ограничения |
 
 ---
 
-## 🙏 Acknowledgments
+## 🤝 Участие в проекте
 
-- [docx](https://github.com/dolanmiu/docx) — OOXML document generation
-- [Vosk](https://alphacephei.com/vosk/) — Russian speech recognition
-- [vk-io](https://github.com/node-libs/vk-io) — VKontakte and MAX bot integration
-- [Radix UI](https://www.radix-ui.com/) — Accessible React components
-- [Framer Motion](https://www.framer.com/motion/) — Animation library
+Приглашаем к участию! Пожалуйста, следуйте этим шагам:
+
+1. **Форкните** репозиторий
+2. **Создайте** ветку функции (`git checkout -b feature/amazing-feature`)
+3. **Коммитьте** свои изменения (`git commit -m 'Add amazing feature'`)
+4. **Отправьте** в ветку (`git push origin feature/amazing-feature`)
+5. **Откройте** Pull Request
+
+### Рекомендации по разработке
+
+- Используйте `pnpm` в качестве менеджера пакетов (никогда не npm/npx)
+- Следуйте существующему стилю кода
+- Добавляйте тесты для новых функций
+- Обновляйте документацию по мере необходимости
+
+---
+
+## 📄 Лицензия
+
+Этот проект лицензирован по **MIT License** — см. файл [LICENSE](LICENSE) для подробностей.
+
+---
+
+## 🙏 Благодарности
+
+- [docx](https://github.com/dolanmiu/docx) — генерация документов OOXML
+- [Vosk](https://alphacephei.com/vosk/) — распознавание русской речи
+- [vk-io](https://github.com/node-libs/vk-io) — интеграция с ботами VKontakte и MAX
+- [Radix UI](https://www.radix-ui.com/) — доступные React-компоненты
+- [Framer Motion](https://www.framer.com/motion/) — библиотека анимаций
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for Russian business document automation**
+**Создано с ❤️ для автоматизации российских деловых документов**
 
 </div>
