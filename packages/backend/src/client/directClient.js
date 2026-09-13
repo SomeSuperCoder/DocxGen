@@ -18,6 +18,9 @@ export function createDirectDocuments(documentService) {
       return {
         getDocuments: (opts = {}) => documentService.list(owner, opts),
 
+        getVersions: (id) => ({ versions: documentService.listVersions(owner, id) }),
+        restoreVersion: (id, versionId) => documentService.restoreVersion(owner, id, versionId),
+
         getDocument: (id) => documentService.get(owner, id),
 
         createDocument: ({ sourceText, docType, templateId } = {}) => {

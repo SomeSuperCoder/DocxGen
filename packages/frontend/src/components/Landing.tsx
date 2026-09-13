@@ -69,7 +69,8 @@ export const Landing = memo(function Landing({ onStart }: LandingProps) {
           </p>
           <p className="hero-detail">
             Исправит текст, соберёт реквизиты и оформит редактируемый DOCX.
-            Начните с того, что уже написали.
+            Покажет правки и источники каждого значения, проверит документ по ГОСТ
+            и сохранит версии. Начните с того, что уже написали.
           </p>
           <div className="hero-actions">
             <Button onClick={onStart}>
@@ -201,8 +202,8 @@ export const Landing = memo(function Landing({ onStart }: LandingProps) {
             рабочих задач.
           </h2>
           <p className="section-description">
-            Четыре типа документов и два шаблона оформления. Выберите подходящий
-            для вашей задачи.
+            Пять типов документов, два шаблона оформления и собственные бланки.
+            Выберите подходящий вариант для вашей задачи.
           </p>
           <div className="type-list">
             {DOCUMENT_TYPES.map((type) => (

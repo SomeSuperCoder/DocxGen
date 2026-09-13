@@ -73,7 +73,7 @@ const image = (name) => ({ name });
  * @param {{ docServiceClient: object, docTypes: object, templates: object, log: object }} deps
  * @returns {{ handle: function, onDocumentEvent: function, onDeliveryFailed: function, setNotifier: function, trackProcessing: function }}
  */
-export function createFlow({ docServiceClient, docTypes, templates, faultManager, debugCommands = false, log, transcribeAudio }) {
+export function createFlow({ docServiceClient, docTypes, templates, faultManager, debugCommands = false, log, transcribeAudio, miniAppUrl, miniAppBot }) {
   /**
    * Create an owner-bound client for a specific user.
    * Returns a client with owner headers attached.
@@ -146,8 +146,10 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
       // ── Commands ────────────────────────────────────────────────────
       if (event.kind === 'command') {
         if (event.command === 'help') {
-          const buttons = this._currentKeyboard(conversation);
-          return [say(texts.help(inputOptions(conversation)), buttons ? { buttons } : {})];
+          const buttons = this._currentKeyboard(conversation) || (conversation.platform === 'max' ? keyboards.miniAppKeyboard({ url: miniAppUrl, botUsername: miniAppBot }) : undefined);
+          const options = inputOptions(conversation);
+          if (conversation.platform === 'max' && miniAppUrl) options.miniAppUrl = miniAppUrl;
+          return [say(texts.help(options), buttons ? { buttons } : {})];
         }
         // Scenario 6: simulate an AI outage for this user only (guarded by DEBUG_COMMANDS)
         if (event.command === 'ai_fail') {
@@ -158,6 +160,10 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
           return [say(texts.aiFaultArmed(), buttons ? { buttons } : {})];
         }
         if (event.command === 'new') return this._startDocument(conversation, event);
+        if (event.command === 'documents') {
+          const docs = await clientFor({ platform: event.platform, id: event.userId }).getDocuments({ limit: 10 });
+          return [say(texts.myDocuments(docs.documents || []), { buttons: keyboards.mainKeyboard(conversation.stateVersion) })];
+        }
 
         // /start — back to the welcome screen
         conversation.state = 'idle';
@@ -170,6 +176,16 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         conversation.state = 'idle';
         conversation.stateVersion++;
         return [this._greeting(conversation)];
+      }
+
+      if (event.kind === 'text' && /^(мои документы|\/documents)$/i.test(event.text)) {
+        const docs = await clientFor({ platform: event.platform, id: event.userId }).getDocuments({ limit: 10 });
+        return [say(texts.myDocuments(docs.documents || []), { buttons: keyboards.mainKeyboard(conversation.stateVersion) })];
+      }
+
+      if (event.kind === 'action' && event.action?.a === 'documents') {
+        const docs = await clientFor({ platform: event.platform, id: event.userId }).getDocuments({ limit: 10 });
+        return [say(texts.myDocuments(docs.documents || []), { buttons: keyboards.mainKeyboard(conversation.stateVersion) })];
       }
 
       // "Новый документ" from any state (typed or pressed)
@@ -514,7 +530,8 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
 
     /** Welcome screen with the «Документ за 3 шага» banner. */
     _greeting(conversation) {
-      return say(texts.greeting(conversation.profile, inputOptions(conversation)), { image: image('greeting') });
+      const buttons = conversation.platform === 'max' ? keyboards.miniAppKeyboard({ url: miniAppUrl, botUsername: miniAppBot }) : undefined;
+      return say(texts.greeting(conversation.profile, inputOptions(conversation)), { image: image('greeting'), ...(buttons ? { buttons } : {}) });
     },
 
     /** Document type choice with the card of all types. */

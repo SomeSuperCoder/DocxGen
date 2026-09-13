@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { RequisitesForm } from './RequisitesForm';
 import type { Requisites, DocTypeField } from '@/types/document';
+import { ChangeReview } from './ChangeReview';
 
 interface CorrectedSectionProps {
   correctedText: string;
@@ -13,6 +14,9 @@ interface CorrectedSectionProps {
   onTextChange: (value: string) => void;
   onRequisiteChange: (field: string, value: string) => void;
   disabled: boolean;
+  sourceText?: string;
+  changes?: string[];
+  sourceQuotes?: Record<string, string | null>;
 }
 export const CorrectedSection = memo(function CorrectedSection({
   correctedText,
@@ -21,6 +25,9 @@ export const CorrectedSection = memo(function CorrectedSection({
   onTextChange,
   onRequisiteChange,
   disabled,
+  sourceText = '',
+  changes = [],
+  sourceQuotes = {},
 }: CorrectedSectionProps) {
   if (!correctedText) return null;
   return (
@@ -61,8 +68,10 @@ export const CorrectedSection = memo(function CorrectedSection({
           requisites={requisites}
           onChange={onRequisiteChange}
           disabled={disabled}
+          sourceQuotes={sourceQuotes}
         />
       </section>
+      <ChangeReview source={sourceText} corrected={correctedText} changes={changes} />
     </div>
   );
 });

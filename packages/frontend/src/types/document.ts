@@ -5,7 +5,7 @@
 
 export type DocumentTypeId = 'memo' | 'report' | 'reference' | 'letter' | 'explanatory-note';
 
-export type TemplateId = 'classic' | 'modern';
+export type TemplateId = string;
 
 export type Requisites = Record<string, string>;
 
@@ -32,7 +32,7 @@ export interface DocType {
 
 export interface CatalogResponse {
   docTypes: DocType[];
-  templates?: Array<{ id: string; name: string }>;
+  templates?: Array<{ id: string; name: string; description?: string }>;
 }
 
 export interface ProcessResponse {
@@ -44,7 +44,13 @@ export interface ProcessResponse {
   };
   source: string;
   documentId?: string;
+  changes?: string[];
+  sourceQuotes?: Record<string, string | null>;
+  gost?: GostReport;
 }
+
+export interface GostCheck { id: string; label: string; ok: boolean; detail: string; }
+export interface GostReport { standard: string; score: number; total: number; checks: GostCheck[]; }
 
 export interface DocumentView {
   id: string;
@@ -58,6 +64,8 @@ export interface DocumentView {
     title: string;
     body: string[];
     aiFields: Record<string, string | { value: string; quote: string } | null>;
+    sourceQuotes?: Record<string, string | null>;
+    changes?: string[];
     warnings?: Array<string | { key?: string; reason?: string; severity?: string }>;
   } | null;
   pending?: Array<{ key: string; label: string; question?: string; example?: string }>;
@@ -88,4 +96,8 @@ export interface DocumentState {
   documentId?: string;
   docTypeFields: DocTypeField[];
   catalog?: CatalogResponse;
+  changes?: string[];
+  sourceQuotes?: Record<string, string | null>;
+  gost?: GostReport;
+  detectedType?: { typeId: DocumentTypeId; typeName: string; confidence: number; evidence: string[] };
 }

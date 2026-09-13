@@ -81,6 +81,12 @@ export function loadTemplates(dir, log) {
 
   return {
     list: () => [...valid.values()],
+    /** Register a validated user template at runtime (DOCX bланк import). */
+    register(template) {
+      const parsed = TemplateSchema.parse(template);
+      valid.set(parsed.id, parsed);
+      return parsed;
+    },
     get(id) {
       const template = valid.get(id);
       if (template) {

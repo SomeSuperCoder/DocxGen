@@ -1,12 +1,15 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
+import { Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Requisites, DocTypeField } from '@/types/document';
+import { SourceQuote } from './ChangeReview';
 
 interface RequisitesFormProps {
   docTypeFields: DocTypeField[];
   requisites: Requisites;
   onChange: (field: string, value: string) => void;
   disabled: boolean;
+  sourceQuotes?: Record<string, string | null>;
 }
 
 /** Empty fields use the same highlight color as placeholders in the preview. */
@@ -15,7 +18,25 @@ export const RequisitesForm = memo(function RequisitesForm({
   requisites,
   onChange,
   disabled,
+  sourceQuotes = {},
 }: RequisitesFormProps) {
+  const [listening, setListening] = useState<string | null>(null);
+  const [directoryHints, setDirectoryHints] = useState<Record<string, string>>({});
+  const dictate = (field: string) => {
+    const Speech = (window as unknown as { SpeechRecognition?: new () => { lang: string; start: () => void; onresult: (event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void; onend: () => void; onerror: () => void } }).SpeechRecognition;
+    if (!Speech) return;
+    const recognition = new Speech();
+    recognition.lang = 'ru-RU'; setListening(field);
+    recognition.onresult = (event) => { const transcript = event.results[0]?.[0]?.transcript || ''; if (transcript) onChange(field, transcript); };
+    recognition.onend = () => setListening(null); recognition.onerror = () => setListening(null); recognition.start();
+  };
+  const lookupDirectory = async (field: DocTypeField, value: string) => {
+    if (!value.trim() || !/(адресат|подпис|автор|исполн|фио)/i.test(field.label)) return;
+    const response = await fetch(`/api/directory/resolve?query=${encodeURIComponent(value)}`, { credentials: 'include' }).catch(() => null);
+    if (!response?.ok) return;
+    const data = await response.json() as { suggestion?: string | null };
+    if (data.suggestion) setDirectoryHints((current) => ({ ...current, [field.key]: data.suggestion! }));
+  };
   // Show loading state when no fields are available
   if (docTypeFields.length === 0) {
     return (
@@ -43,20 +64,26 @@ export const RequisitesForm = memo(function RequisitesForm({
               {field.label}
               {field.required && <span className="ml-0.5 text-red-500">*</span>}
             </span>
-            <input
-              value={requisites[field.key] || ''}
-              onChange={(e) => onChange(field.key, e.target.value)}
-              placeholder={placeholder}
-              disabled={disabled || !isEditable}
-              readOnly={!isEditable}
-              className={cn(
-                'w-full border-0 border-b bg-transparent px-0 py-2 text-base text-foreground transition-colors',
+            <div className="flex items-end gap-2">
+              <input
+                value={requisites[field.key] || ''}
+                onChange={(e) => onChange(field.key, e.target.value)}
+                onBlur={(e) => void lookupDirectory(field, e.target.value)}
+                placeholder={placeholder}
+                disabled={disabled || !isEditable}
+                readOnly={!isEditable}
+                className={cn(
+                  'w-full border-0 border-b bg-transparent px-0 py-2 text-base text-foreground transition-colors',
                 'placeholder:text-muted-foreground/60 focus:outline-none focus-visible:outline-none focus-visible:border-primary',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 'read-only:cursor-default',
-                empty ? 'border-warning' : 'border-border',
-              )}
-            />
+                  empty ? 'border-warning' : 'border-border',
+                )}
+              />
+              {isEditable && <button type="button" title="Надиктовать реквизит" aria-label={`Надиктовать: ${field.label}`} onClick={() => dictate(field.key)} disabled={disabled} className={cn('mb-1 rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-primary', listening === field.key && 'text-primary')}><Mic size={14} /></button>}
+            </div>
+            <SourceQuote quote={sourceQuotes[field.key]} />
+            {directoryHints[field.key] && <button type="button" className="mt-1 text-left text-xs text-primary underline" onClick={() => { onChange(field.key, directoryHints[field.key]); setDirectoryHints((current) => { const next = { ...current }; delete next[field.key]; return next; }); }}>Подставить из справочника: {directoryHints[field.key]}</button>}
           </label>
         );
       })}

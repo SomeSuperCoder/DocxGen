@@ -95,6 +95,14 @@ export function createDocumentServiceClient({ baseUrl, apiKey, owner, timeoutMs 
       return request(`/api/documents${qs ? `?${qs}` : ''}`);
     },
 
+    async getVersions(id) {
+      return request(`/api/documents/${encodeURIComponent(id)}/versions`);
+    },
+
+    async restoreVersion(id, versionId) {
+      return request(`/api/documents/${encodeURIComponent(id)}/versions/${encodeURIComponent(versionId)}/restore`, { method: 'POST' });
+    },
+
     /** Get a single document by ID. */
     async getDocument(id) {
       return request(`/api/documents/${encodeURIComponent(id)}`);

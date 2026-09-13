@@ -219,6 +219,29 @@ POST /api/documents/:id/retry
 Queues a new attempt only when the document is in `ai_failed`. It does not reuse
 the failed `/process` idempotency key.
 
+---
+
+## Product extensions
+
+`POST /api/detect-type` accepts `{ "sourceText": "..." }` and returns a ranked
+suggestion (`typeId`, confidence and matching phrases) for a one-click confirmation.
+
+`GET /api/documents/:id/versions` lists immutable AI/manual/restore versions;
+`POST /api/documents/:id/versions/:versionId/restore` creates an auditable rollback.
+`GET /api/documents/:id/gost` returns the ГОСТ Р 7.0.97-2016 checklist and score.
+
+`GET /api/directory?query=Иванов` searches the employee directory,
+`PUT /api/directory` adds an entry. `POST /api/templates/import` accepts a
+multipart `file` DOCX and extracts its font, margins, header and footer into a
+reusable template. The browser sends `X-Filename` for a readable template name.
+
+`POST /api/documents/process-batch` accepts `{ "documents": [{ "sourceText",
+"docType", "templateId", "filename" }] }` for up to 20 drafts. `GET
+/api/max/mini-app` returns the MAX mini-app URL and explains that microphone
+capture happens in the browser. After those jobs are processed,
+`POST /api/documents/batch-archive` with `{ "documentIds": ["..."] }` returns
+one ZIP archive containing the generated DOCX files.
+
 **Response (202):**
 ```json
 { "jobId": "uuid", "reused": false }

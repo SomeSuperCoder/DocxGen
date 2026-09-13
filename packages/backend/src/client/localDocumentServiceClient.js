@@ -34,6 +34,14 @@ export function createLocalDocumentServiceClient(deps, owner = null) {
       return documentService.list(requireOwner(), options);
     },
 
+    getVersions(id) {
+      return { versions: documentService.listVersions(requireOwner(), id) };
+    },
+
+    restoreVersion(id, versionId) {
+      return documentService.restoreVersion(requireOwner(), id, versionId);
+    },
+
     getDocument(id) {
       return documentService.get(requireOwner(), id);
     },

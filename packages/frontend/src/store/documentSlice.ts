@@ -109,6 +109,8 @@ export const processText = createAsyncThunk<
     return {
       correctedText: current.version.body.join('\n'),
       requisites: { ...aiRequisites, ...current.userFields },
+      changes: current.version.changes ?? [],
+      sourceQuotes: current.version.sourceQuotes ?? Object.fromEntries(Object.entries(current.version.aiFields ?? {}).map(([key, value]) => [key, typeof value === 'object' && value ? value.quote : null])),
       validation: {
         missing: (current.pending ?? [])
           .filter(({ key }) => !hiddenKeys.has(key))
@@ -288,6 +290,8 @@ const documentSlice = createSlice({
         state.requisites = action.payload.requisites;
         state.missingFields = action.payload.validation.missing;
         state.warnings = action.payload.validation.warnings;
+        state.changes = action.payload.changes ?? [];
+        state.sourceQuotes = action.payload.sourceQuotes ?? {};
         state.status = 'Текст обработан';
         state.documentId = action.payload.documentId;
         // Extract docTypeFields from catalog for the current document type

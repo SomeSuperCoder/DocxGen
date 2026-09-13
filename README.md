@@ -16,6 +16,12 @@ DocxGen takes a rough draft in Russian and transforms it into a properly formatt
 
 **Supported clients:** Web, MAX-bot, VK-bot
 
+**Product extensions:** automatic document-type suggestion with confirmation,
+visible before/after comparison and source quotes for every requisite, DOCX
+letterhead import, employee directory lookup, version history and rollback,
+voice normalization for dates and amounts, MAX browser mini-app, batch DOCX
+processing, and a ГОСТ Р 7.0.97-2016 checklist.
+
 ## Quick Start
 
 ### Prerequisites

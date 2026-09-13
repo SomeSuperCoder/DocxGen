@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { Eye, ShieldCheck } from "lucide-react";
 import { DocumentPreview } from "./DocumentPreview";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -11,9 +11,11 @@ import {
   setTemplateId,
   processText,
   generateDocument,
+  fetchCatalog,
 } from "@/store/documentSlice";
 import { DOCUMENT_TYPES, TEMPLATES } from "@/lib/constants";
 import type { DocumentTypeId, TemplateId } from "@/types/document";
+import { BatchPanel, GostChecklist, HistoryPanel, MaxMiniAppBanner, TemplateImport } from './ProductPanels';
 
 import { StepIndicator } from "./StepIndicator";
 import { DraftSection } from "./DraftSection";
@@ -39,6 +41,12 @@ export function DocumentGenerator() {
   const processing = useAppSelector((s) => s.document.processing);
   const generating = useAppSelector((s) => s.document.generating);
   const docTypeFields = useAppSelector((s) => s.document.docTypeFields);
+  const changes = useAppSelector((s) => s.document.changes ?? []);
+  const sourceQuotes = useAppSelector((s) => s.document.sourceQuotes ?? {});
+  const documentId = useAppSelector((s) => s.document.documentId);
+  const catalog = useAppSelector((s) => s.document.catalog);
+  const [detected, setDetected] = useState<{ typeId: DocumentTypeId; typeName: string; confidence: number; evidence: string[] } | null>(null);
+  const [detecting, setDetecting] = useState(false);
 
   const typeDescription = useMemo(
     () =>
@@ -48,8 +56,8 @@ export function DocumentGenerator() {
   );
 
   const templateLabel = useMemo(
-    () => TEMPLATES.find((item) => item.id === templateId)?.label ?? "",
-    [templateId],
+    () => catalog?.templates?.find((item) => item.id === templateId)?.name || TEMPLATES.find((item) => item.id === templateId)?.label || templateId,
+    [templateId, catalog],
   );
 
 
@@ -91,8 +99,18 @@ export function DocumentGenerator() {
 
   const handleProcess = useCallback(() => {
     if (!text.trim()) return;
+    if (detected) { dispatch(setDocumentType(detected.typeId)); setDetected(null); return; }
     dispatch(processText({ text, documentType, templateId }));
-  }, [dispatch, text, documentType, templateId]);
+  }, [dispatch, text, documentType, templateId, detected]);
+
+  const handleDetectType = useCallback(async () => {
+    if (!text.trim()) return;
+    setDetecting(true);
+    try {
+      const response = await fetch('/api/detect-type', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sourceText: text }) });
+      if (response.ok) setDetected((await response.json()).suggestion);
+    } finally { setDetecting(false); }
+  }, [text]);
 
   const handleGenerate = useCallback(() => {
     if (!text.trim() || !correctedText.trim()) return;
@@ -119,6 +137,7 @@ export function DocumentGenerator() {
       transition={{ duration: prefersReduced ? 0 : 0.4, ease: "easeOut" }}
       className="site-container"
     >
+      <MaxMiniAppBanner />
       <div className="workspace-heading">
         <div>
           <h1>Документ за три шага</h1>
@@ -158,7 +177,12 @@ export function DocumentGenerator() {
                   onTemplateChange={handleTemplateChange}
                   onAudioTranscribed={handleAudioTranscribed}
                   disabled={processing || generating}
+                  templates={catalog?.templates}
                 />
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button type="button" className="rounded-md border border-primary/30 px-3 py-2 text-xs text-primary hover:bg-primary/5" onClick={() => void handleDetectType()} disabled={detecting || !text.trim()}>{detecting ? 'Определяем…' : 'Определить тип по черновику'}</button>
+                  {detected && <span className="text-xs text-muted-foreground">Похоже на <b>{detected.typeName}</b> · уверенность {Math.round(detected.confidence * 100)}% <button type="button" className="ml-2 underline" onClick={() => { dispatch(setDocumentType(detected.typeId)); setDetected(null); }}>Подтвердить</button></span>}
+                </div>
               </motion.div>
             ) : (
               <motion.div
@@ -170,6 +194,9 @@ export function DocumentGenerator() {
               >
                 <CorrectedSection
                   correctedText={correctedText}
+                  sourceText={text}
+                  changes={changes}
+                  sourceQuotes={sourceQuotes}
                   requisites={requisites}
                   docTypeFields={docTypeFields}
                   onTextChange={handleCorrectedTextChange}
@@ -190,6 +217,10 @@ export function DocumentGenerator() {
             </div>
           )}
           <ValidationAlert missingFields={missingFields} warnings={warnings} />
+          {correctedText && <GostChecklist documentId={documentId} />}
+          {correctedText && <HistoryPanel documentId={documentId} onRestore={(doc) => { if (doc.version) { dispatch(setCorrectedText([doc.version.title, ...doc.version.body].filter(Boolean).join('\n'))); dispatch({ type: 'document/setRequisites', payload: doc.userFields }); } }} />}
+          <div className="mt-5 flex flex-wrap gap-2"><TemplateImport onImported={() => dispatch(fetchCatalog())} /></div>
+          <BatchPanel />
           <div className="workspace-action-bar">
             <p className="workspace-action-note">
               {correctedText
@@ -225,8 +256,7 @@ export function DocumentGenerator() {
           <p className="preview-template-name">{templateLabel}</p>
           <p className="preview-template-description">
             {
-              TEMPLATES.find((template) => template.id === templateId)
-                ?.description
+              catalog?.templates?.find((template) => template.id === templateId)?.description || TEMPLATES.find((template) => template.id === templateId)?.description
             }
           </p>
           <p className="preview-disclaimer">
