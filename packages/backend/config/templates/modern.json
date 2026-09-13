@@ -8,7 +8,7 @@
   "font": { "family": "Arial", "sizePt": 12 },
   "paragraph": { "lineSpacing": 1.15, "firstLineIndentMm": 12.5, "align": "justify", "spaceAfterPt": 6 },
   "header": { "pageNumber": "center", "firstPage": false, "text": null },
-  "footer": { "text": null },
+  "footer": { "text": null, "pageNumber": "nOfM" },
   "blocks": {
     "orgHeader":  { "show": false, "align": "center", "bold": true },
     "addressee":  { "position": "left", "widthPercent": 100 },

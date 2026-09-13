@@ -6,7 +6,7 @@
   "organization": { "name": "", "address": "г. Москва, ул. Примерная, д. 1", "phone": "+7 (000) 000-00-00" },
   "page": { "marginsMm": { "top": 20, "right": 15, "bottom": 20, "left": 30 } },
   "font": { "family": "Times New Roman", "sizePt": 14 },
-  "paragraph": { "lineSpacing": 1.0, "firstLineIndentMm": 12.5, "align": "justify", "spaceAfterPt": 0 },
+  "paragraph": { "lineSpacing": 1.5, "firstLineIndentMm": 12.5, "align": "justify", "spaceAfterPt": 0 },
   "header": { "pageNumber": "center", "firstPage": false, "text": null },
   "footer": { "text": null },
   "blocks": {

@@ -149,8 +149,11 @@ function docTitle(model) {
  */
 function dateNumber(model, prefix = '№') {
   const cfg = model.template.blocks.dateNumber;
-  // ГОСТ: prepend "от " to the date value
-  const dateRuns = [new TextRun('от '), ...valueRuns(model, 'Дата')];
+  // ГОСТ: prepend "от " to the date value, but only if not already present
+  const dateVal = model.values['Дата']?.value;
+  const dateRuns = dateVal && dateVal.startsWith('от ')
+    ? [...valueRuns(model, 'Дата')]
+    : [new TextRun('от '), ...valueRuns(model, 'Дата')];
   // ГОСТ: prefix is configurable — letters use "Исх." (outgoing), others use "№".
   const numberParaRuns = model.values['Номер']?.value
     ? [new TextRun(` ${prefix} ${model.values['Номер'].value}`)]
@@ -388,26 +391,26 @@ function approvalBlock(model) {
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       spacing: { after: 120 },
-      children: [new TextRun({ text: 'УТВЕРЖДАЮ', bold: true, size: halfPt(14) })],
+      children: [new TextRun({ text: 'УТВЕРЖДАЮ', bold: true, size: halfPt(model.template.font.sizePt) })],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: approval.position || '', size: halfPt(14) })],
+      children: [new TextRun({ text: approval.position || '', size: halfPt(model.template.font.sizePt) })],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       children: [
-        new TextRun({ text: '_________________  ', size: halfPt(14) }),
-        new TextRun({ text: approval.signature || '', size: halfPt(14) }),
+        new TextRun({ text: '_________________  ', size: halfPt(model.template.font.sizePt) }),
+        new TextRun({ text: approval.signature || '', size: halfPt(model.template.font.sizePt) }),
       ],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: approval.name || '', size: halfPt(14) })],
+      children: [new TextRun({ text: approval.name || '', size: halfPt(model.template.font.sizePt) })],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: approval.date || '', size: halfPt(14) })],
+      children: [new TextRun({ text: approval.date || '', size: halfPt(model.template.font.sizePt) })],
     }),
   ];
 }
@@ -424,26 +427,26 @@ function agreementBlock(model) {
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       spacing: { after: 120 },
-      children: [new TextRun({ text: 'СОГЛАСОВАНО', bold: true, size: halfPt(14) })],
+      children: [new TextRun({ text: 'СОГЛАСОВАНО', bold: true, size: halfPt(model.template.font.sizePt) })],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: agreement.position || '', size: halfPt(14) })],
+      children: [new TextRun({ text: agreement.position || '', size: halfPt(model.template.font.sizePt) })],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
       children: [
-        new TextRun({ text: '_________________  ', size: halfPt(14) }),
-        new TextRun({ text: agreement.signature || '', size: halfPt(14) }),
+        new TextRun({ text: '_________________  ', size: halfPt(model.template.font.sizePt) }),
+        new TextRun({ text: agreement.signature || '', size: halfPt(model.template.font.sizePt) }),
       ],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: agreement.name || '', size: halfPt(14) })],
+      children: [new TextRun({ text: agreement.name || '', size: halfPt(model.template.font.sizePt) })],
     }),
     new Paragraph({
       alignment: AlignmentType.RIGHT,
-      children: [new TextRun({ text: agreement.date || '', size: halfPt(14) })],
+      children: [new TextRun({ text: agreement.date || '', size: halfPt(model.template.font.sizePt) })],
     }),
   ];
 }
@@ -459,13 +462,13 @@ function attachmentBlock(model) {
   const lines = [
     new Paragraph({
       spacing: { before: 240 },
-      children: [new TextRun({ text: 'Приложение:', bold: true, size: halfPt(14) })],
+      children: [new TextRun({ text: 'Приложение:', bold: true, size: halfPt(model.template.font.sizePt) })],
     }),
   ];
 
   attachments.forEach((att, i) => {
     lines.push(new Paragraph({
-      children: [new TextRun({ text: `${i + 1}. ${att}`, size: halfPt(14) })],
+      children: [new TextRun({ text: `${i + 1}. ${att}`, size: halfPt(model.template.font.sizePt) })],
     }));
   });
 
@@ -483,7 +486,7 @@ function copyBlock(model) {
   const lines = [
     new Paragraph({
       spacing: { before: 240 },
-      children: [new TextRun({ text: 'Копия:', bold: true, size: halfPt(14) })],
+      children: [new TextRun({ text: 'Копия:', bold: true, size: halfPt(model.template.font.sizePt) })],
     }),
   ];
 
@@ -492,7 +495,7 @@ function copyBlock(model) {
       ? copy
       : `${copy.name || ''} — ${copy.position || ''}`;
     lines.push(new Paragraph({
-      children: [new TextRun({ text, size: halfPt(14) })],
+      children: [new TextRun({ text, size: halfPt(model.template.font.sizePt) })],
     }));
   });
 
