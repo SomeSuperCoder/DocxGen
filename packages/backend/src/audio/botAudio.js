@@ -1,4 +1,5 @@
 import { DomainError } from '../core/errors.js';
+import { createAudioClient } from './audioClient.js';
 
 /**
  * Ссылка на файл голосового сообщения из вложения платформы:
@@ -32,27 +33,15 @@ async function download(url, { maxBytes, fetchImpl }) {
  * @returns {(audio: object, owner: { platform: string, ownerId: string }) => Promise<{ text: string }>}
  */
 export function createBotTranscriber({ serviceUrl, apiKey = '', maxBytes = 25 * 1024 * 1024, fetchImpl = fetch }) {
-  return async function transcribeAudio(audio, { platform, ownerId }) {
+  const client = createAudioClient({ serviceUrl, apiKey, fetchImpl });
+  return async function transcribeAudio(audio, owner) {
     let buffer = audio?.buffer;
     if (!buffer) {
       const url = audioUrlOf(audio);
       if (!url) throw DomainError.AUDIO_INVALID('Во вложении нет ссылки на аудиофайл');
       buffer = await download(url, { maxBytes, fetchImpl });
     }
-
-    const form = new FormData();
-    form.append('file', new Blob([buffer]), 'voice.ogg');
-    const response = await fetchImpl(`${serviceUrl}/api/audio/transcribe`, {
-      method: 'POST',
-      headers: { 'X-Owner-Platform': platform, 'X-Owner-Id': String(ownerId), ...(apiKey ? { 'X-Api-Key': apiKey } : {}) },
-      body: form,
-      signal: AbortSignal.timeout(120000),
-    }).catch((error) => { throw DomainError.STT_FAILED(`Аудиосервис недоступен: ${error.message}`); });
-
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new DomainError(body.error?.code ?? 'STT_FAILED', body.error?.message ?? `Аудиосервис ответил HTTP ${response.status}`, response.status);
-    }
-    return { text: String(body.text ?? '').trim() };
+    const { text } = await client.transcribe(buffer, owner);
+    return { text };
   };
 }

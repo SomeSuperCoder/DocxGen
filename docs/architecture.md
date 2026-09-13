@@ -11,7 +11,7 @@ flowchart LR
   MAX[MAX adapter] --> FLOW[Dialog flow]
   VK[VK adapter] --> FLOW
   FLOW -. voice messages .-> STT[Audio service / Vosk]
-  WEB -. microphone .-> STT
+  API -. microphone .-> STT
   API --> DOC[Document service]
   FLOW --> DOC
   DOC --> Q[SQLite job queue]
@@ -37,8 +37,9 @@ HTTP server, pollers, worker and database together.
 - `bot/flow.js` contains the platform-independent dialog state machine;
 - `adapters/max` and `adapters/vk` translate platform events into the shared
   dispatcher and send replies back through their platform;
-- `audio/botAudio.js` downloads bot voice messages and sends them to the audio
-  service (`audio-service.js`, see [audio-service.md](audio-service.md));
+- `audio/audioClient.js` sends audio to the audio service (`audio-service.js`,
+  see [audio-service.md](audio-service.md)); `audio/botAudio.js` downloads bot
+  voice messages for it, and `POST /api/audio/transcribe` forwards web recordings;
 - `http/api.js` exposes the web API and uses the same document service directly;
 - `client/localDocumentServiceClient.js` is the owner-bound facade used by the
   dialog flow. `client/documentServiceClient.js` remains available for an

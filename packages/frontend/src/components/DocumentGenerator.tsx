@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "@/hooks";
 import {
   setText,
+  appendText,
   setCorrectedText,
   setDocumentType,
   setTemplateId,
@@ -57,6 +58,10 @@ export function DocumentGenerator() {
 
   const handleTextChange = useCallback(
     (value: string) => dispatch(setText(value)),
+    [dispatch],
+  );
+  const handleAudioTranscribed = useCallback(
+    (value: string) => dispatch(appendText(value)),
     [dispatch],
   );
   const handleCorrectedTextChange = useCallback(
@@ -151,6 +156,7 @@ export function DocumentGenerator() {
                   onTextChange={handleTextChange}
                   onTypeChange={handleTypeChange}
                   onTemplateChange={handleTemplateChange}
+                  onAudioTranscribed={handleAudioTranscribed}
                   disabled={processing || generating}
                 />
               </motion.div>

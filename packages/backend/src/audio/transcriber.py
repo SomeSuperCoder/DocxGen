@@ -4,10 +4,17 @@ import json
 import os
 import sys
 
+
+def reply(payload):
+    # ASCII-only JSON (\\uXXXX): a piped stdout on Windows is cp1252 and cannot encode Cyrillic.
+    # Node's JSON.parse restores the text, so the answer does not depend on the console encoding.
+    print(json.dumps(payload), flush=True)
+
+
 try:
     from vosk import Model, KaldiRecognizer
 except Exception as exc:
-    print(json.dumps({"error": f"Vosk не установлен: {exc}"}, ensure_ascii=False), flush=True)
+    reply({"error": f"Vosk не установлен: {exc}"})
     sys.exit(1)
 
 model = Model(os.environ["VOSK_MODEL_PATH"])
@@ -17,6 +24,6 @@ for line in sys.stdin:
         recognizer = KaldiRecognizer(model, 16000)
         recognizer.AcceptWaveform(bytes.fromhex(request["pcm"]))
         result = json.loads(recognizer.FinalResult())
-        print(json.dumps({"text": result.get("text", "")}, ensure_ascii=False), flush=True)
+        reply({"text": result.get("text", "")})
     except Exception as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False), flush=True)
+        reply({"error": str(exc)})

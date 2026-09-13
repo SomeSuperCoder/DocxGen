@@ -3,6 +3,13 @@ import { decode } from '../../bot/payload.js';
 const command = (text) => { const value = String(text ?? '').trim().toLowerCase(); return ['/start', 'начать'].includes(value) ? 'start' : ['/help', 'помощь'].includes(value) ? 'help' : ['/new', 'новый документ'].includes(value) ? 'new' : value === '/ai_fail' ? 'ai_fail' : null; };
 function updates(raw) { return Array.isArray(raw) ? raw : Array.isArray(raw?.updates) ? raw.updates : [raw]; }
 
+const AUDIO_FILE = /\.(m4a|mp3|ogg|oga|opus|wav|webm|aac|amr|flac)$/i;
+
+/** Голосовые MAX ботам не передаёт, поэтому запись можно прислать аудиофайлом — вложение `file` с расширением звука. */
+function isAudioAttachment(item) {
+  return item?.type === 'audio' || item?.type === 'voice' || (item?.type === 'file' && AUDIO_FILE.test(String(item.filename ?? '')));
+}
+
 /** Имя пользователя из объекта User MAX (first_name, last_name; у старых клиентов — только name). */
 function profileOf(user) {
   if (!user || user.is_bot) return undefined;
@@ -30,7 +37,10 @@ export function toInboundEvents(raw) {
     if (update.update_type !== 'message_created') continue;
     const message = update.message ?? update; const body = message.body ?? message; const recipient = message.recipient ?? update.recipient ?? {}; const sender = message.sender ?? update.sender ?? {};
     if ((recipient.chat_type && recipient.chat_type !== 'dialog') || sender.is_bot) continue;
-     const text = body.text ?? ''; const eventId = `m:${body.mid ?? message.mid ?? `${recipient.chat_id}:${message.timestamp ?? update.timestamp ?? Date.now()}`}`; const cmd = command(text); const audio = (body.attachments ?? []).find((item) => item.type === 'audio' || item.type === 'voice');
+    // Голосовое сообщение Bot API MAX присылает без поля message: нет ни чата, ни отправителя, ответить некому.
+    // Без этой проверки такие события всех пользователей сливались в один диалог «max:undefined».
+    if (recipient.chat_id === undefined || recipient.chat_id === null) continue;
+     const text = body.text ?? ''; const eventId = `m:${body.mid ?? message.mid ?? `${recipient.chat_id}:${message.timestamp ?? update.timestamp ?? Date.now()}`}`; const cmd = command(text); const audio = (body.attachments ?? []).find(isAudioAttachment);
      result.push({ platform: 'max', kind: audio ? 'audio' : cmd ? 'command' : 'text', ...(audio ? { audio } : cmd ? { command: cmd } : { text }), eventId, peerId: String(recipient.chat_id), userId: String(sender.user_id ?? message.user_id ?? recipient.chat_id), profile: profileOf(sender), meta: { mid: body.mid, chatType: recipient.chat_type } });
   }
   return result;

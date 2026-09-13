@@ -356,6 +356,37 @@ curl http://localhost:3000/api/documents/{id}/log
 
 ---
 
+### Transcribe Audio
+
+```
+POST /api/audio/transcribe
+```
+
+Recognizes Russian speech in an audio file (the web microphone and «Загрузить аудио»).
+The request is `multipart/form-data` with the field `file`: WebM/Opus, MP4/M4A, OGG,
+MP3 or WAV, up to 25 MB. The backend forwards it to the audio service (Vosk) on behalf
+of the session owner; see [audio-service.md](audio-service.md).
+
+**Response (200):**
+```json
+{
+  "ok": true,
+  "text": "прошу выделить ноутбук для нового сотрудника",
+  "duration": 3.4
+}
+```
+
+`duration` is the length of the audio in seconds. Errors: `AUDIO_INVALID` (400) — no
+file or an unreadable file; `STT_FAILED` (502) — no speech recognized;
+`STT_UNAVAILABLE` (503) — the audio service is not running.
+
+**Curl:**
+```bash
+curl -X POST http://localhost:3000/api/audio/transcribe -F "file=@voice.m4a"
+```
+
+---
+
 ### Template Previews
 
 ```
@@ -384,6 +415,9 @@ curl http://localhost:3000/templates/previews/classic.png
 | `NOT_READY` | 409 | No processed version available |
 | `UNKNOWN_TYPE` | 400 | Invalid document type ID |
 | `UNKNOWN_TEMPLATE` | 400 | Invalid template ID |
+| `AUDIO_INVALID` | 400 | No audio file, or the file cannot be read |
+| `STT_FAILED` | 502 | Speech was not recognized |
+| `STT_UNAVAILABLE` | 503 | The audio service is not running |
 | `RATE_LIMITED` | 429 | Too many requests (30/min per IP) |
 | `INTERNAL` | 500 | Server error |
 

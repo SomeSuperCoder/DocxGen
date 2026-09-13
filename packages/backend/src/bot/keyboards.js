@@ -23,13 +23,13 @@ export function mainKeyboard(stateVersion = 0) {
 }
 
 /**
- * Draft collection keyboard — shown while building the draft.
+ * Draft collection keyboard — shown once the draft has text (never under an empty draft).
  * @param {number} stateVersion
  * @returns {import('./flow.js').Button[][]}
  */
 export function draftKeyboard(stateVersion = 0) {
   return [
-    [{ label: 'Продолжить', action: encode({ a: 'continue', r: stateVersion }) }],
+    [{ label: 'Готово — выбрать тип', style: 'primary', action: encode({ a: 'continue', r: stateVersion }) }],
     [
       { label: 'Показать черновик', action: encode({ a: 'show_draft', r: stateVersion }) },
       { label: 'Заменить текст', action: encode({ a: 'replace_mode', r: stateVersion }) },
@@ -37,28 +37,40 @@ export function draftKeyboard(stateVersion = 0) {
   ];
 }
 
+/** «Назад» — to the previous step; the flow handles `back` at the type and the template steps. */
+function backRow(stateVersion) {
+  return [{ label: '← Назад', action: encode({ a: 'back', r: stateVersion }) }];
+}
+
 /**
- * Document type keyboard — one button per type.
+ * Document type keyboard — one button per type, then «Назад» to the draft.
  * @param {Array<{ id: string, name: string }>} docTypes
  * @param {number} stateVersion
  * @returns {import('./flow.js').Button[][]}
  */
 export function typeKeyboard(docTypes, stateVersion = 0) {
-  return docTypes.map(dt => [
-    { label: dt.name, action: encode({ a: 'set_type', v: dt.id, r: stateVersion }) },
-  ]);
+  return [
+    ...docTypes.map(dt => [
+      { label: dt.name, action: encode({ a: 'set_type', v: dt.id, r: stateVersion }) },
+    ]),
+    backRow(stateVersion),
+  ];
 }
 
 /**
- * Template keyboard — one button per template with description.
+ * Template keyboard — one button per template, then «Назад» to the type.
+ * The label is the name only: the description is in the message, and VK cuts a label at 40 characters.
  * @param {Array<{ id: string, name: string, description: string }>} templates
  * @param {number} stateVersion
  * @returns {import('./flow.js').Button[][]}
  */
 export function templateKeyboard(templates, stateVersion = 0) {
-  return templates.map(t => [
-    { label: `${t.name} — ${t.description}`, action: encode({ a: 'set_template', v: t.id, r: stateVersion }) },
-  ]);
+  return [
+    ...templates.map(t => [
+      { label: t.name, action: encode({ a: 'set_template', v: t.id, r: stateVersion }) },
+    ]),
+    backRow(stateVersion),
+  ];
 }
 
 /**
@@ -68,8 +80,8 @@ export function templateKeyboard(templates, stateVersion = 0) {
  */
 export function fieldKeyboard(stateVersion = 0) {
   return [
-    [{ label: 'Оставить незаполненным', action: encode({ a: 'skip_field', r: stateVersion }) }],
-    [{ label: 'Пропустить остальные', action: encode({ a: 'skip_all', r: stateVersion }) }],
+    [{ label: 'Пропустить', action: encode({ a: 'skip_field', r: stateVersion }) }],
+    [{ label: 'Пропустить все вопросы', action: encode({ a: 'skip_all', r: stateVersion }) }],
   ];
 }
 

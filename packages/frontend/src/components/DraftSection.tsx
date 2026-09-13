@@ -1,5 +1,5 @@
-import { memo, useRef, useState } from 'react';
-import { FileText, LockKeyhole, Mic, Square, Sparkles, Upload } from "lucide-react";
+import { memo, useRef } from 'react';
+import { FileText, Loader2, LockKeyhole, Mic, Square, Sparkles, Upload } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { DOCUMENT_TYPES } from "@/lib/constants";
 import { DOCUMENT_EXAMPLES } from "@/lib/examples";
+import { formatDuration, MAX_RECORDING_SECONDS, useVoiceInput } from "@/lib/useVoiceInput";
 import type { DocumentTypeId, TemplateId } from "@/types/document";
 
 interface DraftSectionProps {
@@ -23,7 +24,8 @@ interface DraftSectionProps {
   onTypeChange: (value: DocumentTypeId) => void;
   onTemplateChange: (value: TemplateId) => void;
   disabled: boolean;
-  onAudioTranscribed?: (text: string) => void;
+  /** Текст, распознанный из записи или аудиофайла. */
+  onAudioTranscribed: (text: string) => void;
 }
 export const DraftSection = memo(function DraftSection({
   text,
@@ -37,43 +39,7 @@ export const DraftSection = memo(function DraftSection({
   onAudioTranscribed,
 }: DraftSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const [recording, setRecording] = useState(false);
-  const [audioBusy, setAudioBusy] = useState(false);
-  const [audioError, setAudioError] = useState('');
-
-  async function transcribe(blob: Blob) {
-    setAudioBusy(true); setAudioError('');
-    try {
-      const response = await fetch('/api/audio/transcribe', { method: 'POST', headers: { 'X-Owner-Platform': 'web', 'X-Owner-Id': 'session', ...(import.meta.env.VITE_API_KEY ? { 'X-API-Key': import.meta.env.VITE_API_KEY } : {}) }, body: (() => { const form = new FormData(); form.append('file', blob, 'recording.webm'); return form; })() });
-      const responseText = await response.text();
-      let data: { ok?: boolean; text?: string; error?: { message?: string } };
-      try { data = JSON.parse(responseText); }
-      catch {
-        if (response.status === 502) {
-          throw new Error('Старый Vite-прокси не знает маршрут audio. Полностью остановите старый dev-процесс (Ctrl+C), затем запустите из корня: npm run dev.');
-        }
-        throw new Error(`Сервис распознавания вернул не JSON (HTTP ${response.status}).`);
-      }
-      if (!response.ok || !data.ok) throw new Error(data.error?.message ?? 'Не удалось распознать аудио');
-      if (!data.text) throw new Error('Сервис не вернул распознанный текст');
-      onAudioTranscribed?.(data.text);
-    } catch (error) { setAudioError(error instanceof Error ? error.message : 'Ошибка распознавания'); }
-    finally { setAudioBusy(false); }
-  }
-
-  async function toggleRecording() {
-    if (recording) { recorderRef.current?.stop(); setRecording(false); return; }
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') { setAudioError('Запись аудио не поддерживается браузером'); return; }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream); chunksRef.current = [];
-      recorder.ondataavailable = (event) => { if (event.data.size) chunksRef.current.push(event.data); };
-      recorder.onstop = () => { stream.getTracks().forEach((track) => track.stop()); void transcribe(new Blob(chunksRef.current, { type: recorder.mimeType })); };
-      recorderRef.current = recorder; recorder.start(); setRecording(true); setAudioError('');
-    } catch { setAudioError('Нет доступа к микрофону'); }
-  }
+  const voice = useVoiceInput(onAudioTranscribed);
 
   return (
     <div>
@@ -117,14 +83,69 @@ export const DraftSection = memo(function DraftSection({
           <span>{text.length.toLocaleString("ru-RU")} симв.</span>
         </div>
       </Card>
-      <div className="flex flex-wrap items-center gap-2 mt-3">
-        <button type="button" onClick={() => void toggleRecording()} disabled={disabled || audioBusy} className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50">
-          {recording ? <Square size={16} /> : <Mic size={16} />} {recording ? 'Остановить запись' : 'Записать голосом'}
-        </button>
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={disabled || audioBusy} className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"><Upload size={16} /> Загрузить аудио</button>
-        <input ref={inputRef} hidden type="file" accept="audio/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void transcribe(file); event.target.value = ''; }} />
-        {audioBusy && <span className="text-sm text-gray-500">Распознавание…</span>}
-        {audioError && <span role="alert" className="text-sm text-red-600">{audioError}</span>}
+      <div className="voice-input">
+        <div className="voice-input-controls">
+          {voice.phase === "recording" ? (
+            <>
+              <Button type="button" size="sm" onClick={voice.stop}>
+                <Square size={14} fill="currentColor" aria-hidden="true" />
+                Остановить запись
+              </Button>
+              <span className="voice-input-timer">
+                <span className="voice-input-dot" aria-hidden="true" />
+                <span>{formatDuration(voice.elapsed)}</span>
+                <span className="voice-input-limit">из {formatDuration(MAX_RECORDING_SECONDS)}</span>
+              </span>
+            </>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void voice.start()}
+              disabled={disabled || voice.phase !== "idle"}
+            >
+              <Mic size={15} aria-hidden="true" />
+              Записать голосом
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={disabled || voice.phase !== "idle"}
+          >
+            <Upload size={15} aria-hidden="true" />
+            Загрузить аудио
+          </Button>
+          <input
+            ref={inputRef}
+            hidden
+            type="file"
+            accept="audio/*"
+            aria-label="Аудиофайл"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) voice.transcribeFile(file);
+              event.target.value = "";
+            }}
+          />
+        </div>
+        {voice.phase === "transcribing" && (
+          <p role="status" className="voice-input-status">
+            <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+            Распознаём речь — текст появится в черновике
+          </p>
+        )}
+        {voice.phase === "idle" && !voice.error && (
+          <p className="voice-input-status">Надиктованный текст добавится в конец черновика</p>
+        )}
+        {voice.error && (
+          <p role="alert" className="voice-input-status voice-input-error">
+            {voice.error}
+          </p>
+        )}
       </div>
       <div className="draft-settings">
         <div>

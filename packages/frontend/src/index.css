@@ -1010,6 +1010,51 @@ svg {
   align-items: center;
   gap: 6px;
 }
+.voice-input {
+  margin-top: 14px;
+}
+.voice-input-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.voice-input-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.voice-input-limit {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+}
+.voice-input-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--destructive));
+  animation: voice-input-pulse 1.2s ease-in-out infinite;
+}
+@keyframes voice-input-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.voice-input-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+  line-height: 1.6;
+}
+.voice-input-error {
+  color: hsl(var(--destructive));
+}
 .draft-settings {
   display: grid;
   grid-template-columns: 1fr 1fr;

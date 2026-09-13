@@ -37,62 +37,80 @@ function chars(count) {
 // ── Greeting ─────────────────────────────────────────────────────────────────
 
 /**
- * Welcome message shown on /start or first interaction.
- * @returns {{ text: string, buttons: string[][] }}
+ * How a draft can be sent. Voice messages are mentioned only where the platform delivers them
+ * to the bot: the MAX Bot API sends a voice message without its content (see adapters/max/normalize.js).
+ * @typedef {{ voice?: boolean }} InputOptions
  */
-export function greeting(profile = null) {
+
+/** «текстом или голосовым» / «текстом». */
+function byText({ voice = true } = {}, withVoice = 'текстом или голосовым') {
+  return voice ? withVoice : 'текстом';
+}
+
+/**
+ * Welcome message shown on /start or first interaction.
+ * The draft is sent right away — there is no separate «create a document» step.
+ * @param {{ firstName?: string, lastName?: string } | null} profile
+ * @param {InputOptions} [options]
+ * @returns {{ text: string }}
+ */
+export function greeting(profile = null, options = {}) {
   const name = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
   return {
     text: [
       name ? `👋 <b>Здравствуйте, ${esc(name)}!</b>` : '👋 <b>Здравствуйте!</b>',
       'Я оформлю служебный документ по вашему черновику — <b>за 3 шага</b>:',
       '',
-      '1️⃣ пришлите черновик — как есть, хоть обрывками',
-      '2️⃣ выберите тип документа и оформление',
-      '3️⃣ получите готовый файл Word',
+      '1️⃣ вы присылаете черновик — как есть, хоть обрывками',
+      '2️⃣ выбираете тип документа и оформление',
+      '3️⃣ получаете готовый файл Word',
       '',
       '<i>Исправлю ошибки и стиль, но не добавлю сведений, которых нет в тексте.</i>',
+      '',
+      `👇 <b>Пришлите черновик</b> следующим сообщением — ${byText(options)}.`,
     ].join('\n'),
-    buttons: [['Создать документ']],
   };
 }
 
 /**
- * Hint for the idle state when the user presses something other than «Создать документ».
+ * Hint for the idle state when the user sends something that is not a draft.
+ * @param {InputOptions} [options]
  * @returns {string}
  */
-export function pressCreate() {
-  return 'Нажмите «Создать документ» или просто пришлите текст черновика.';
+export function pressCreate(options = {}) {
+  return `👇 Пришлите черновик — ${byText(options)}. Из него я и сделаю документ.`;
 }
 
 // ── Draft collection ─────────────────────────────────────────────────────────
 
 /**
- * Step 1 prompt — ask for the draft text.
+ * Step 1 prompt — ask for the draft text. No buttons yet: there is nothing to go on with.
+ * @param {InputOptions} [options]
  * @returns {string}
  */
-export function collectDraftStart() {
+export function collectDraftStart(options = {}) {
   return [
     '📝 <b>Шаг 1 из 3 · Черновик</b>',
     '',
-    'Пришлите текст — можно несколькими сообщениями, я соберу их по порядку.',
-    'Когда закончите, нажмите «Продолжить».',
+    `Пришлите черновик ${byText(options)} — можно несколькими сообщениями, я соберу их по порядку.`,
+    'Когда закончите, нажмите «Готово» под моим ответом.',
   ].join('\n');
 }
 
 /**
  * Acknowledge draft received, show character count.
  * @param {number} charCount
+ * @param {InputOptions} [options]
  * @returns {{ text: string, buttons: string[][] }}
  */
-export function collectDraftAccepted(charCount) {
+export function collectDraftAccepted(charCount, options = {}) {
   return {
     text: [
-      `✍️ <b>Принято.</b> В черновике ${chars(charCount)}.`,
-      '<i>Можно дописать ещё или нажать «Продолжить».</i>',
+      `✍️ <b>Добавил в черновик</b> — теперь в нём ${chars(charCount)}.`,
+      `Это всё? Нажмите «Готово». Или пришлите продолжение — ${byText(options, 'текстом или голосом')}.`,
     ].join('\n'),
     buttons: [
-      ['Продолжить'],
+      ['Готово — выбрать тип'],
       ['Показать черновик', 'Заменить текст'],
     ],
   };
@@ -110,9 +128,12 @@ export function showDraft(draft) {
   return `📝 <b>Черновик</b> · ${chars(source.length)}\n\n${esc(shown)}${cut}`;
 }
 
-/** @returns {string} */
-export function draftEmpty() {
-  return '📭 Черновик пуст. Пришлите текст.';
+/**
+ * @param {InputOptions} [options]
+ * @returns {string}
+ */
+export function draftEmpty(options = {}) {
+  return `📭 В черновике пока пусто. Пришлите его ${byText(options)} — после этого появится кнопка «Готово».`;
 }
 
 /** @returns {string} */
@@ -126,6 +147,18 @@ export function audioNotRecognized() {
 }
 
 /**
+ * A voice message outside the draft step. Requisites and the corrected text go into the document
+ * as they are, and a transcript has no capitals, punctuation or digits.
+ * @param {boolean} expectsText - the step waits for a typed answer (a requisite, the edited text)
+ * @returns {string}
+ */
+export function voiceOnlyForDraft(expectsText) {
+  return expectsText
+    ? '🎙️ Голосом можно прислать только черновик. Здесь напишите ответ текстом.'
+    : '🎙️ Голосом можно прислать только черновик. Сейчас выберите вариант кнопкой.';
+}
+
+/**
  * Transcript of a voice message, shown before the regular reply.
  * @param {string} text
  * @returns {string}
@@ -136,19 +169,25 @@ export function voiceRecognized(text) {
   return `🎙️ <b>Распознал голосовое:</b>\n<i>${esc(shown)}</i>`;
 }
 
-/** @returns {string} */
-export function replaceMode() {
-  return '🔄 Отправьте новый текст — старый будет заменён.';
+/**
+ * @param {InputOptions} [options]
+ * @returns {string}
+ */
+export function replaceMode(options = {}) {
+  return `🔄 Пришлите новый черновик ${byText(options)} — он заменит весь прежний текст.`;
 }
 
 /** @returns {string} */
 export function backToDraft() {
-  return '📝 <b>Вернулись к черновику.</b>\nМожно дописать текст или нажать «Продолжить».';
+  return '📝 <b>Вернулись к черновику.</b>\nМожно дописать текст или нажать «Готово».';
 }
 
-/** @returns {string} */
-export function newDocument() {
-  return '🆕 <b>Новый документ создан.</b>\nПришлите текст черновика.';
+/**
+ * @param {InputOptions} [options]
+ * @returns {string}
+ */
+export function newDocument(options = {}) {
+  return `🆕 <b>Новый документ.</b>\nПришлите черновик — ${byText(options)}.`;
 }
 
 // ── Document type selection ──────────────────────────────────────────────────
@@ -206,6 +245,7 @@ export function processing() {
     '⏳ <b>Шаг 3 из 3 · Обработка</b>',
     '',
     'Исправляю текст и проверяю реквизиты. Обычно это занимает до минуты.',
+    'Если для документа чего-то не хватит — например, адресата, — спрошу.',
   ].join('\n');
 }
 
@@ -256,20 +296,20 @@ export function editPrompt() {
  */
 export function askField(field, remaining = 1) {
   const lines = [
-    `🧾 <b>Реквизит: ${esc(field.label)}</b>${remaining > 1 ? ` · осталось ${remaining}` : ''}`,
+    `🧾 <b>Не хватает для документа: ${esc(field.label)}</b>${remaining > 1 ? ` · осталось ${remaining}` : ''}`,
     '',
     esc(field.question),
   ];
   if (field.example) {
     lines.push(`<i>Например: ${esc(field.example)}</i>`);
   }
-  lines.push('', `Если оставить пустым, в документе будет пометка [${esc(field.label)}].`);
+  lines.push('', `Ответьте сообщением или нажмите «Пропустить» — тогда в документе останется пометка [${esc(field.label)}].`);
 
   return {
     text: lines.join('\n'),
     buttons: [
-      ['Оставить незаполненным'],
-      ['Пропустить остальные'],
+      ['Пропустить'],
+      ['Пропустить все вопросы'],
     ],
   };
 }
@@ -365,16 +405,22 @@ export function commandDisabled() {
 
 /**
  * Help message — how the bot works and which commands exist.
+ * @param {InputOptions} [options]
  * @returns {string}
  */
-export function help() {
+export function help(options = {}) {
+  const voice = options.voice ?? true;
   return [
     '💡 <b>Как это работает</b>',
     '',
-    '1️⃣ пришлите черновик текстом — можно несколькими сообщениями;',
+    `1️⃣ пришлите черновик ${byText(options)} — можно несколькими сообщениями — и нажмите «Готово»;`,
     '2️⃣ выберите тип документа и шаблон оформления;',
-    '3️⃣ ответьте на вопросы о реквизитах — или пропустите их;',
-    '4️⃣ получите DOCX и при желании смените шаблон одной кнопкой.',
+    '3️⃣ ответьте на вопросы о недостающих данных — или пропустите их;',
+    '4️⃣ получите файл Word; шаблон и тип можно сменить одной кнопкой.',
+    '',
+    voice
+      ? '🎙️ Голосовые распознаю и покажу, что понял, — текст потом исправит ИИ.'
+      : '🎙️ Голосовые сообщения MAX пока не передаёт ботам. Надиктовать черновик можно на сайте или в боте ВКонтакте.',
     '',
     '<b>Команды</b>',
     '/start — начать заново',

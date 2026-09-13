@@ -170,7 +170,9 @@ export function createDispatcher({ db, flow, adapters, log }) {
             platform: event.platform, peerId: event.peerId,
             pressed: event.action?.r, current: conversation.stateVersion,
           }, 'нажата устаревшая кнопка');
-          await adapter.send(event.peerId, [{ text: texts.staleButton(), format: 'html' }], { event });
+          // Кнопки текущего шага: иначе после старой кнопки пользователю нечего нажать
+          const buttons = flow.currentKeyboard?.(conversation);
+          await adapter.send(event.peerId, [{ text: texts.staleButton(), format: 'html', ...(buttons ? { buttons } : {}) }], { event });
           return;
         }
 

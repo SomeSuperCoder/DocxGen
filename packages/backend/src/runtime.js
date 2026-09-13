@@ -44,6 +44,7 @@ import { createVkLongPoller } from './adapters/vk/longpoll.js';
 import { toInboundEvent } from './adapters/vk/normalize.js';
 import { createBotImages } from './adapters/common/botImages.js';
 import { createBotTranscriber } from './audio/botAudio.js';
+import { createAudioClient } from './audio/audioClient.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -84,12 +85,10 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
     faultManager,
   });
 
-  // Голосовые сообщения ботов распознаёт тот же аудиосервис (Vosk), что и микрофон на сайте.
-  const transcribeAudio = createBotTranscriber({
-    serviceUrl: `http://127.0.0.1:${config.AUDIO_SERVICE_PORT ?? 3005}`,
-    apiKey: config.API_KEY,
-    maxBytes: config.AUDIO_MAX_BYTES,
-  });
+  // Голосовые сообщения ботов и микрофон на сайте распознаёт один аудиосервис (Vosk).
+  const audioService = { serviceUrl: `http://127.0.0.1:${config.AUDIO_SERVICE_PORT ?? 3005}`, apiKey: config.API_KEY };
+  const audioClient = createAudioClient(audioService);
+  const transcribeAudio = createBotTranscriber({ ...audioService, maxBytes: config.AUDIO_MAX_BYTES });
   const flow = createFlow({ docServiceClient, docTypes, templates, faultManager, debugCommands: config.DEBUG_COMMANDS, log: logger, transcribeAudio });
   const adapters = new Map();
   const dispatcher = createDispatcher({ db, flow, adapters, log: logger });
@@ -126,7 +125,12 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
       pollers.push(createMaxPoller({
         client: maxClient,
         onEvent: async (raw) => {
-          for (const event of toInboundEvents(raw)) {
+          const events = toInboundEvents(raw);
+          if (!events.length && raw?.update_type === 'message_created' && !raw.message) {
+            // Так Bot API MAX присылает голосовое: без чата и отправителя — ответить пользователю нельзя.
+            logger.info({ timestamp: raw.timestamp }, 'MAX: сообщение без содержимого (голосовое?) — Bot API не передаёт его боту');
+          }
+          for (const event of events) {
             const accepted = dispatcher.accept(event, raw);
             if (accepted) await dispatcher.run(accepted, adapter);
           }
@@ -156,7 +160,7 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
     }
   }
 
-  const app = createApp({ log: logger, deps: { documentService, docTypes, templates, fileStorage, db, log: logger, apiKey: config.API_KEY, routers } });
+  const app = createApp({ log: logger, deps: { documentService, docTypes, templates, fileStorage, db, log: logger, apiKey: config.API_KEY, audioClient, audioMaxBytes: config.AUDIO_MAX_BYTES, routers } });
 
   for (const poller of pollers) void poller.start();
   // Events accepted before a restart are processed once the adapters are registered.
