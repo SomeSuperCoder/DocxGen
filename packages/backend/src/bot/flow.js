@@ -40,6 +40,19 @@ function textOf(result) {
 }
 
 /**
+ * Text reply in HTML (texts.js escapes every value).
+ * @param {string | { text: string }} result - texts.js function result
+ * @param {{ buttons?: Array, image?: { name: string } }} [extra]
+ * @returns {{ text: string, format: 'html', buttons?: Array, image?: { name: string } }}
+ */
+function say(result, extra = {}) {
+  return { text: textOf(result), format: 'html', ...extra };
+}
+
+/** Illustration shipped in assets/bot (see adapters/common/botImages.js). */
+const image = (name) => ({ name });
+
+/**
  * Create the dialog flow handler.
  *
  * Uses the injected document-service client for all document operations.
@@ -88,42 +101,51 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
      * @returns {Promise<Array<{text, buttons?, format?, image?, file?}>>}
      */
     async handle(conversation, event) {
-      // Adapters may attach a downloaded audio buffer. Treat its transcription
-      // exactly like a typed draft, preserving the existing FSM and grounding.
+      // A voice message carries the platform attachment (a link) or an already downloaded buffer.
+      // Its transcription is handled exactly like a typed draft, preserving the FSM and grounding;
+      // the transcript is echoed first so the user sees what was recognized.
       if (event.kind === 'audio') {
-        if (typeof transcribeAudio !== 'function' || !event.audio?.buffer) {
-          return [{ text: 'Не удалось получить аудиофайл. Отправьте его ещё раз или введите текст.' }];
+        if (typeof transcribeAudio !== 'function' || !event.audio) {
+          return [say(texts.audioUnavailable())];
         }
-        const result = await transcribeAudio(event.audio.buffer, { platform: event.platform, ownerId: event.userId });
-        event = { ...event, kind: 'text', text: result.text };
+        let text;
+        try {
+          ({ text } = await transcribeAudio(event.audio, { platform: event.platform, ownerId: event.userId }));
+        } catch (err) {
+          log.warn({ error: err.message, code: err.code }, 'voice message not transcribed');
+          return [say(texts.audioNotRecognized())];
+        }
+        if (!text) return [say(texts.audioNotRecognized())];
+        const replies = await this.handle(conversation, { ...event, kind: 'text', text });
+        return [say(texts.voiceRecognized(text)), ...replies];
       }
       // ── Global commands (work from any state) ─────────────────────────────
 
       // ── Commands ────────────────────────────────────────────────────
       if (event.kind === 'command') {
         if (event.command === 'help') {
-          return [{ text: textOf(texts.help()), buttons: this._currentKeyboard(conversation) }];
+          return [say(texts.help(), { buttons: this._currentKeyboard(conversation) })];
         }
         // Scenario 6: simulate an AI outage for this user only (guarded by DEBUG_COMMANDS)
         if (event.command === 'ai_fail') {
-          if (!debugCommands) return [{ text: 'Эта команда отключена.' }];
+          if (!debugCommands) return [say(texts.commandDisabled())];
           // Флаг взводится в сервисе документов — ИИ работает там, а не здесь
           await clientFor({ platform: event.platform, id: event.userId }).armAiFault();
-          return [{ text: textOf(texts.aiFaultArmed()), buttons: this._currentKeyboard(conversation) }];
+          return [say(texts.aiFaultArmed(), { buttons: this._currentKeyboard(conversation) })];
         }
         if (event.command === 'new') return this._startDocument(conversation, event);
 
         // /start — back to the welcome screen
         conversation.state = 'idle';
         conversation.stateVersion++;
-        return [{ text: textOf(texts.greeting(conversation.profile)), buttons: keyboards.mainKeyboard(conversation.stateVersion) }];
+        return [this._greeting(conversation)];
       }
 
       // "Начать" / "/start" typed as plain text
       if (event.kind === 'text' && /^(начать|\/start)$/i.test(event.text)) {
         conversation.state = 'idle';
         conversation.stateVersion++;
-        return [{ text: textOf(texts.greeting(conversation.profile)), buttons: keyboards.mainKeyboard(conversation.stateVersion) }];
+        return [this._greeting(conversation)];
       }
 
       // "Новый документ" from any state (typed or pressed)
@@ -142,7 +164,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         case 'choose_template':
           return this._handleChooseTemplate(conversation, event);
         case 'processing':
-          return [{ text: textOf(texts.busy()) }];
+          return [say(texts.busy())];
         case 'ai_failed':
           return this._handleAiFailed(conversation, event);
         case 'confirm_warnings':
@@ -157,7 +179,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         case 'editing':
           return this._handleEditing(conversation, event);
         default:
-          return [{ text: 'Неизвестное состояние. Начните заново.', buttons: keyboards.mainKeyboard(conversation.stateVersion) }];
+          return [say(texts.unknownState(), { buttons: keyboards.mainKeyboard(conversation.stateVersion) })];
       }
     },
 
@@ -172,9 +194,9 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         await clientFor(owner).setDraft(doc.id, event.text, { mode: 'replace' });
         conversation.state = 'collecting';
         conversation.stateVersion++;
-        return [{ text: `Принято. В черновике ${event.text.length} символов.`, buttons: keyboards.draftKeyboard(conversation.stateVersion) }];
+        return [say(texts.collectDraftAccepted(event.text.length), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
       }
-      return [{ text: 'Нажмите «Создать документ».', buttons: keyboards.mainKeyboard(conversation.stateVersion) }];
+      return [say(texts.pressCreate(), { buttons: keyboards.mainKeyboard(conversation.stateVersion) })];
     },
 
     async _handleCollecting(conversation, event) {
@@ -184,21 +206,20 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         if (event.action?.a === 'continue') {
           const doc = await clientFor(owner).getDocument(conversation.documentId);
           if (!doc.sourceText) {
-            return [{ text: 'Черновик пуст. Пришлите текст.' }];
+            return [say(texts.draftEmpty())];
           }
           conversation.state = 'choose_type';
           conversation.stateVersion++;
-          const types = docTypes.list();
-          return [{ text: textOf(texts.chooseType(types)), buttons: keyboards.typeKeyboard(types, conversation.stateVersion) }];
+          return [this._chooseType(conversation)];
         }
         if (event.action?.a === 'show_draft') {
           const doc = await clientFor(owner).getDocument(conversation.documentId);
           // The keyboard is repeated: in MAX the pressed message loses its buttons and the user would be stuck
-          return [{ text: `Черновик (${doc.sourceText.length} символов):\n\n${doc.sourceText.slice(0, 2000)}`, buttons: keyboards.draftKeyboard(conversation.stateVersion) }];
+          return [say(texts.showDraft(doc.sourceText), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
         }
         if (event.action?.a === 'replace_mode') {
           conversation.ctx = { ...conversation.ctx, inputMode: 'replace' };
-          return [{ text: 'Отправьте новый текст — старый будет заменён.' }];
+          return [say(texts.replaceMode())];
         }
       }
 
@@ -208,7 +229,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         // Reset to append after replace
         conversation.ctx = { ...conversation.ctx, inputMode: 'append' };
         const doc = await clientFor(owner).getDocument(conversation.documentId);
-        return [{ text: `Принято. В черновике ${doc.sourceText.length} символов.`, buttons: keyboards.draftKeyboard(conversation.stateVersion) }];
+        return [say(texts.collectDraftAccepted(doc.sourceText.length), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
       }
 
       return [];
@@ -222,8 +243,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         await clientFor(owner).updateDocument(conversation.documentId, { docType: typeId });
         conversation.state = 'choose_template';
         conversation.stateVersion++;
-        const tmplList = templates.list();
-        return [{ text: textOf(texts.chooseTemplate(tmplList)), buttons: keyboards.templateKeyboard(tmplList, conversation.stateVersion) }];
+        return [this._chooseTemplate(conversation)];
       }
 
       if (event.kind === 'text') {
@@ -237,16 +257,15 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
           await clientFor(owner).updateDocument(conversation.documentId, { docType: match.id });
           conversation.state = 'choose_template';
           conversation.stateVersion++;
-          const tmplList = templates.list();
-          return [{ text: textOf(texts.chooseTemplate(tmplList)), buttons: keyboards.templateKeyboard(tmplList, conversation.stateVersion) }];
+          return [this._chooseTemplate(conversation)];
         }
-        return [{ text: 'Не понял тип. Выберите кнопкой.', buttons: keyboards.typeKeyboard(types, conversation.stateVersion) }];
+        return [say(texts.unknownType(), { buttons: keyboards.typeKeyboard(types, conversation.stateVersion) })];
       }
 
       if (event.kind === 'action' && event.action?.a === 'back') {
         conversation.state = 'collecting';
         conversation.stateVersion++;
-        return [{ text: 'Вернитесь к черновику.', buttons: keyboards.draftKeyboard(conversation.stateVersion) }];
+        return [say(texts.backToDraft(), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
       }
 
       return [];
@@ -273,14 +292,13 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         conversation.stateVersion++;
         this.trackProcessing(conversation.documentId, owner);
         await clientFor(owner).processDocument(conversation.documentId);
-        return [{ text: textOf(texts.processing()) }];
+        return [say(texts.processing())];
       }
 
       if (event.kind === 'action' && event.action?.a === 'back') {
         conversation.state = 'choose_type';
         conversation.stateVersion++;
-        const types = docTypes.list();
-        return [{ text: textOf(texts.chooseType(types)), buttons: keyboards.typeKeyboard(types, conversation.stateVersion) }];
+        return [this._chooseType(conversation)];
       }
 
       return [];
@@ -294,12 +312,12 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         await clientFor(owner).retryProcessing(conversation.documentId);
         conversation.state = 'processing';
         conversation.stateVersion++;
-        return [{ text: 'Повторная обработка...' }];
+        return [say(texts.retrying())];
       }
 
       if (event.kind === 'action' && event.action?.a === 'show_draft') {
         const doc = await clientFor(owner).getDocument(conversation.documentId);
-        return [{ text: `Черновик:\n\n${doc.sourceText.slice(0, 2000)}`, buttons: keyboards.retryKeyboard(conversation.stateVersion) }];
+        return [say(texts.showDraft(doc.sourceText), { buttons: keyboards.retryKeyboard(conversation.stateVersion) })];
       }
 
       if (event.kind === 'action' && event.action?.a === 'new') {
@@ -307,7 +325,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         conversation.documentId = doc.id;
         conversation.state = 'collecting';
         conversation.stateVersion++;
-        return [{ text: 'Новый документ создан.', buttons: keyboards.draftKeyboard(conversation.stateVersion) }];
+        return [say(texts.newDocument(), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
       }
 
       return [];
@@ -334,8 +352,8 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
           const next = pending[0];
           conversation.pendingField = next.key;
           return [
-            { text: textOf(texts.result(doc.version?.changes || [])) },
-            { text: textOf(texts.askField(next, 1, pending.length)), buttons: keyboards.fieldKeyboard(conversation.stateVersion) },
+            say(texts.result(doc.version?.changes || [])),
+            say(texts.askField(next, pending.length), { buttons: keyboards.fieldKeyboard(conversation.stateVersion) }),
           ];
         }
 
@@ -349,13 +367,13 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         conversation.stateVersion++;
         this.trackProcessing(conversation.documentId, owner);
         await clientFor(owner).processDocument(conversation.documentId);
-        return [{ text: textOf(texts.processing()) }];
+        return [say(texts.processing())];
       }
 
       if (event.kind === 'action' && event.action?.a === 'edit_text') {
         conversation.state = 'editing';
         conversation.stateVersion++;
-        return [{ text: 'Отправьте исправленный текст. Абзацы разделяйте пустой строкой. Первая строка — заголовок «О ...».' }];
+        return [say(texts.editPrompt())];
       }
 
       return [];
@@ -390,7 +408,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         conversation.state = 'ready';
         conversation.stateVersion++;
         return [
-          { text: 'Отправляю файл ещё раз.', buttons: keyboards.resultKeyboard(conversation.stateVersion) },
+          say(texts.resending(), { buttons: keyboards.resultKeyboard(conversation.stateVersion) }),
           { file: { fileId: conversation.lastFileId, caption: 'Документ' } },
         ];
       }
@@ -404,28 +422,26 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
       if (event.kind === 'action' && event.action?.a === 'other_template') {
         conversation.state = 'choose_template';
         conversation.stateVersion++;
-        const tmplList = templates.list();
-        return [{ text: textOf(texts.chooseTemplate(tmplList)), buttons: keyboards.templateKeyboard(tmplList, conversation.stateVersion) }];
+        return [this._chooseTemplate(conversation)];
       }
 
       if (event.kind === 'action' && event.action?.a === 'other_type') {
         conversation.state = 'choose_type';
         conversation.stateVersion++;
-        const types = docTypes.list();
-        return [{ text: textOf(texts.chooseType(types)), buttons: keyboards.typeKeyboard(types, conversation.stateVersion) }];
+        return [this._chooseType(conversation)];
       }
 
       if (event.kind === 'action' && event.action?.a === 'edit_text') {
         conversation.state = 'editing';
         conversation.stateVersion++;
-        return [{ text: 'Отправьте исправленный текст. Абзацы разделяйте пустой строкой. Первая строка — заголовок «О ...».' }];
+        return [say(texts.editPrompt())];
       }
 
       if (event.kind === 'action' && event.action?.a === 'show_draft') {
         const doc = await clientFor(owner).getDocument(conversation.documentId);
         if (doc.version) {
           const text = [doc.version.title, ...doc.version.body].filter(Boolean).join('\n\n');
-          return [{ text: `Исправленный текст:\n\n${text}`, buttons: keyboards.resultKeyboard(conversation.stateVersion) }];
+          return [say(texts.showResult(text), { buttons: keyboards.resultKeyboard(conversation.stateVersion) })];
         }
       }
 
@@ -467,7 +483,24 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
       conversation.pendingField = null;
       conversation.state = 'collecting';
       conversation.stateVersion++;
-      return [{ text: textOf(texts.collectDraftStart()), buttons: keyboards.draftKeyboard(conversation.stateVersion) }];
+      return [say(texts.collectDraftStart(), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
+    },
+
+    /** Welcome screen with the «Документ за 3 шага» banner. */
+    _greeting(conversation) {
+      return say(texts.greeting(conversation.profile), { buttons: keyboards.mainKeyboard(conversation.stateVersion), image: image('greeting') });
+    },
+
+    /** Document type choice with the card of all types. */
+    _chooseType(conversation) {
+      const types = docTypes.list();
+      return say(texts.chooseType(types), { buttons: keyboards.typeKeyboard(types, conversation.stateVersion), image: image('types') });
+    },
+
+    /** Template choice with the side-by-side template sketch. */
+    _chooseTemplate(conversation) {
+      const tmplList = templates.list();
+      return say(texts.chooseTemplate(tmplList), { buttons: keyboards.templateKeyboard(tmplList, conversation.stateVersion), image: image('templates') });
     },
 
     /**
@@ -516,15 +549,18 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         const docType = docTypes.get(doc.docType);
         const { template } = templates.get(doc.templateId);
         const fallback = fallbackId ? { requestedId: fallbackId, reason: 'missing_or_invalid' } : null;
-        const replies = [{ text: texts.ready(docType?.name || doc.docType, template?.name || doc.templateId, placeholders, fallback) }];
-        replies[0].buttons = keyboards.resultKeyboard(conversation.stateVersion);
-        replies.push({ file: { fileId, caption: filename } });
-        return replies;
+        return [
+          say(texts.ready(docType?.name || doc.docType, template?.name || doc.templateId, placeholders, fallback), {
+            buttons: keyboards.resultKeyboard(conversation.stateVersion),
+            image: image('ready'),
+          }),
+          { file: { fileId, caption: filename } },
+        ];
       } catch (err) {
         log.error({ error: err.message }, 'render failed');
         conversation.state = 'delivery_failed';
         conversation.stateVersion++;
-        return [{ text: textOf(texts.deliveryError()), buttons: keyboards.resendKeyboard(conversation.stateVersion) }];
+        return [say(texts.deliveryError(), { buttons: keyboards.resendKeyboard(conversation.stateVersion) })];
       }
     },
 
@@ -554,7 +590,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
       const next = pending[0];
       conversation.pendingField = next.key;
       conversation.pendingQueue = pending.slice(1);
-      return [{ text: textOf(texts.askField(next, 1, pending.length)), buttons: keyboards.fieldKeyboard(conversation.stateVersion) }];
+      return [say(texts.askField(next, pending.length), { buttons: keyboards.fieldKeyboard(conversation.stateVersion) })];
     },
 
     // ── External event handlers (called by notifier/dispatcher) ───────────
@@ -580,7 +616,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
           today: new Date().toISOString().slice(0, 10),
         });
 
-        const replies = [{ text: texts.result(doc.version?.changes || []) }];
+        const replies = [say(texts.result(doc.version?.changes || []))];
 
         // Check for warnings (AI added facts not in draft)
         const warnings = doc.version?.warnings || {};
@@ -597,7 +633,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
           conversation.stateVersion++;
           const next = pending[0];
           conversation.pendingField = next.key;
-          replies.push({ text: textOf(texts.askField(next, 1, pending.length)), buttons: keyboards.fieldKeyboard(conversation.stateVersion) });
+          replies.push(say(texts.askField(next, pending.length), { buttons: keyboards.fieldKeyboard(conversation.stateVersion) }));
           return replies;
         }
 
@@ -612,7 +648,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         const charCount = doc?.sourceText?.length || 0;
         conversation.state = 'ai_failed';
         conversation.stateVersion++;
-        return [{ text: textOf(texts.aiError(charCount)), buttons: keyboards.retryKeyboard(conversation.stateVersion) }];
+        return [say(texts.aiError(charCount), { buttons: keyboards.retryKeyboard(conversation.stateVersion), image: image('ai-error') })];
       }
 
       return [];
@@ -628,7 +664,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
       conversation.state = 'delivery_failed';
       conversation.lastFileId = fileId;
       conversation.stateVersion++;
-      return [{ text: textOf(texts.deliveryError()), buttons: keyboards.resendKeyboard(conversation.stateVersion) }];
+      return [say(texts.deliveryError(), { buttons: keyboards.resendKeyboard(conversation.stateVersion) })];
     },
   };
 }

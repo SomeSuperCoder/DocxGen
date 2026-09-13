@@ -170,7 +170,7 @@ export function createDispatcher({ db, flow, adapters, log }) {
             platform: event.platform, peerId: event.peerId,
             pressed: event.action?.r, current: conversation.stateVersion,
           }, 'нажата устаревшая кнопка');
-          await adapter.send(event.peerId, [{ text: texts.staleButton() }], { event });
+          await adapter.send(event.peerId, [{ text: texts.staleButton(), format: 'html' }], { event });
           return;
         }
 
@@ -201,7 +201,7 @@ export function createDispatcher({ db, flow, adapters, log }) {
         log.error({ event, error: err.message }, 'dispatcher run failed');
         markFailed.run(event.platform, event.eventId);
         try {
-          await adapter.send(event.peerId, [{ text: 'Произошла ошибка. Повторите действие — введённый текст сохранён.' }], { event });
+          await adapter.send(event.peerId, [{ text: '⚠️ Произошла ошибка. Повторите действие — введённый текст сохранён.', format: 'html' }], { event });
         } catch {}
       } finally {
         release();

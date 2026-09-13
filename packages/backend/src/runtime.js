@@ -4,7 +4,7 @@
  * Layers (each one only knows the layer below):
  *   HTTP / bot adapters → dispatcher + flow → documentService → queue/worker → AI, DOCX, SQLite
  *
- * Clients: REST API (web), MAX bot, VK bot and the local stand (/dev/chat).
+ * Clients: REST API (web), MAX bot and VK bot.
  * Bots are optional — enable them with MAX_ENABLED / VK_ENABLED in .env.
  */
 
@@ -42,8 +42,8 @@ import { createVkAdapter } from './adapters/vk/adapter.js';
 import { createVkCallbackRouter } from './adapters/vk/callback.js';
 import { createVkLongPoller } from './adapters/vk/longpoll.js';
 import { toInboundEvent } from './adapters/vk/normalize.js';
-import { createLocalChatAdapter } from './adapters/local/adapter.js';
-import { createLocalChatRouter } from './adapters/local/router.js';
+import { createBotImages } from './adapters/common/botImages.js';
+import { createBotTranscriber } from './audio/botAudio.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -74,7 +74,7 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
   };
   const worker = startWorker({ db, queue, handlers, log: logger });
 
-  // MAX, VK, local chat and the web API share this document service in-process.
+  // MAX, VK and the web API share this document service in-process.
   // There is no separate backend process for a messenger: adapters only translate
   // platform events and delegate document operations to this core service.
   const docServiceClient = createLocalDocumentServiceClient({
@@ -84,7 +84,13 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
     faultManager,
   });
 
-  const flow = createFlow({ docServiceClient, docTypes, templates, faultManager, debugCommands: config.DEBUG_COMMANDS, log: logger });
+  // Голосовые сообщения ботов распознаёт тот же аудиосервис (Vosk), что и микрофон на сайте.
+  const transcribeAudio = createBotTranscriber({
+    serviceUrl: `http://127.0.0.1:${config.AUDIO_SERVICE_PORT ?? 3005}`,
+    apiKey: config.API_KEY,
+    maxBytes: config.AUDIO_MAX_BYTES,
+  });
+  const flow = createFlow({ docServiceClient, docTypes, templates, faultManager, debugCommands: config.DEBUG_COMMANDS, log: logger, transcribeAudio });
   const adapters = new Map();
   const dispatcher = createDispatcher({ db, flow, adapters, log: logger });
   const notifier = createNotifier({ dispatcher, flow, adapters, docServiceClient, log: logger, pollIntervalMs: config.DOCUMENT_POLL_INTERVAL_MS });
@@ -94,7 +100,8 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
 
   // Adapters read files by id — the row carries the path and the human-readable filename.
   const files = { get: (id) => db.prepare('SELECT * FROM files WHERE id = ?').get(id) ?? null };
-  const previewRoot = path.join(ROOT, 'config/templates');
+  // Иллюстрации сообщений бота (приветствие, выбор типа и шаблона, готово, сбой ИИ)
+  const botImages = createBotImages({ dir: path.join(ROOT, 'assets/bot') });
   const routers = [];
   const pollers = [];
   let maxClient = null;
@@ -111,7 +118,7 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
     // API MAX работает на сертификате УЦ Минцифры — его нет в наборе Node.js.
     trustExtraCa(config.MAX_CA_FILE ? path.resolve(ROOT, config.MAX_CA_FILE) : '', logger);
     maxClient = createMaxClient({ baseUrl: config.MAX_API_URL, token: config.MAX_TOKEN });
-    const adapter = createMaxAdapter({ db, client: maxClient, files, log: logger, previewRoot });
+    const adapter = createMaxAdapter({ db, client: maxClient, files, log: logger, images: botImages });
     adapters.set('max', adapter);
     if (config.MAX_MODE === 'webhook') {
       routers.push(createMaxWebhookRouter({ secret: config.MAX_WEBHOOK_SECRET, dispatcher, adapter, log: logger }));
@@ -131,7 +138,7 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
 
   if (config.VK_ENABLED) {
     const client = createVkClient({ token: config.VK_TOKEN, apiVersion: config.VK_API_VERSION });
-    const adapter = createVkAdapter({ db, client, files, log: logger, previewRoot });
+    const adapter = createVkAdapter({ db, client, files, log: logger, images: botImages });
     adapters.set('vk', adapter);
     if (config.VK_MODE === 'callback') {
       routers.push(createVkCallbackRouter({ groupId: config.VK_GROUP_ID, secret: config.VK_CALLBACK_SECRET, confirmationCode: config.VK_CONFIRMATION_CODE, dispatcher, adapter, log: logger }));
@@ -147,12 +154,6 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
         log: logger,
       }));
     }
-  }
-
-  if (config.LOCAL_CHAT) {
-    const adapter = createLocalChatAdapter({ files });
-    adapters.set('local', adapter);
-    routers.push(createLocalChatRouter({ adapter, dispatcher, db, previewDir: path.join(previewRoot, 'previews'), samplesDir: path.join(ROOT, 'demo/cases') }));
   }
 
   const app = createApp({ log: logger, deps: { documentService, docTypes, templates, fileStorage, db, log: logger, apiKey: config.API_KEY, routers } });

@@ -11,7 +11,7 @@
  * возможность выдать себя за произвольного посетителя сайта.
  */
 
-export const DELEGATABLE_PLATFORMS = Object.freeze(['max', 'vk', 'local']);
+export const DELEGATABLE_PLATFORMS = Object.freeze(['max', 'vk']);
 
 /** Идентификатор пользователя мессенджера: у MAX и ВК это числа, запас взят с избытком. */
 const MAX_OWNER_ID_LENGTH = 128;

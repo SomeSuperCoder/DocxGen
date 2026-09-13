@@ -38,7 +38,7 @@ export function createApp({ log, deps = {} } = {}) {
   // API routes — health is always available; document routes require deps
   app.use(createApiRouter(deps));
 
-  // Bot adapters and the local stand: webhooks, callbacks and /dev/chat.
+  // Bot adapters: MAX webhook and VK callback.
   // Mounted before the error handler so their async errors are formatted the same way.
   for (const router of deps.routers ?? []) app.use(router);
 

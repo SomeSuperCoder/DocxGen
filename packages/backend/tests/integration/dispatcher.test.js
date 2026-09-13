@@ -175,7 +175,7 @@ describe('dispatcher', () => {
     // Should send stale button message, not process through flow
     expect(adapter.send).toHaveBeenCalledWith(
       'peer-1',
-      [{ text: expect.stringContaining('предыдущему шагу') }],
+      [{ text: expect.stringContaining('предыдущему шагу'), format: 'html' }],
       { event }
     );
     expect(flow.handle).not.toHaveBeenCalled();
@@ -199,7 +199,7 @@ describe('dispatcher', () => {
     // Error message sent to user
     expect(adapter.send).toHaveBeenCalledWith(
       'peer-1',
-      [{ text: expect.stringContaining('ошибка') }],
+      [{ text: expect.stringContaining('ошибка'), format: 'html' }],
       { event }
     );
   });

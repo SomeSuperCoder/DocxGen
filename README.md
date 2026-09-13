@@ -36,8 +36,11 @@ npm run dev
 service on port 3005. `pnpm` is also supported when it is installed, but is not
 required.
 
-Server starts at http://localhost:3000. With `LOCAL_CHAT=1` (default in `.env.example`) the bot dialog
-is available in the browser at http://localhost:3000/dev/chat — no messenger tokens required.
+The bot dialog runs in MAX and VK — enable them in `.env` (see below).
+
+Voice input (web microphone and bot voice messages) needs ffmpeg and a one-time
+setup of Vosk: `cd packages/backend && npm run setup:audio` — see
+[docs/audio-service.md](docs/audio-service.md).
 
 ### AI provider
 
@@ -70,13 +73,6 @@ Step-by-step setup (community settings, access rights, tokens, webhooks): [docs/
 MAX note: the MAX API runs on a certificate of the Russian Ministry of Digital Development CA, which is
 missing from the Node.js and Windows trust stores. The root certificate ships in
 `packages/backend/certs/` and is trusted **inside this process only** (`MAX_CA_FILE`), the system store is untouched.
-
-## Local stand (/dev/chat)
-
-A messenger emulator for development: the same dialog as in MAX and VK, plus
-demo drafts, `/ai_fail` (simulated AI outage), simulated file-delivery failure,
-the AI processing log and a second user for isolation checks. Enable with `LOCAL_CHAT=1`
-(never on a public server — the stand has no authentication).
 
 ## Logs
 
@@ -154,7 +150,6 @@ Key environment variables:
 | `AI_TEMPERATURE` | AI temperature | 0.1 |
 | `AI_TIMEOUT_MS` | AI request timeout | 90000 |
 | `AI_FAULT` | Simulate AI failures | off |
-| `LOCAL_CHAT` | Local stand at /dev/chat | 0 |
 | `OPENCODE_MODEL` | Override the model of the doc-editor agent | (agent default) |
 | `OPENCODE_MAX_PARALLEL` | Parallel AI calls (free models allow 1) | 1 |
 | `MAX_ENABLED` | Enable MAX bot | 0 |
@@ -197,6 +192,8 @@ pnpm build         # Build project
 - [Bots setup](docs/bots-setup.md) — VK community and MAX bot, step by step (in Russian)
 - [Integration Guide](docs/integration-guide.md) — Practical examples for web, bot, and third-party integrations
 - [Architecture](docs/architecture.md) — Single backend and adapter architecture
+- [Document generation](docs/document-generation.md) — Placeholder-based DOCX generation and Russian field keys
+- [Audio service](docs/audio-service.md) — Speech recognition for the web microphone and bot voice messages
 - [AI processing](docs/ai.md) — Providers, validation, retries and debug logging
 - [Adding types/templates](docs/adding-type-or-template.md) — Catalog extension guide
 - [Limitations](docs/limitations.md) — Deployment and provider constraints

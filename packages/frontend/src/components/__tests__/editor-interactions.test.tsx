@@ -41,25 +41,36 @@ describe("editor interactions", () => {
   });
 
   it("keeps edited requisites in the store and live preview", () => {
+    // Field keys are the Russian labels from the backend catalog (config/doc-types/memo.json).
     const store = renderEditor({
+      documentType: "memo",
       text: "Черновик",
       correctedText: "Исправленный текст.",
-      requisites: { authorName: "Петров П. П." },
+      docTypeFields: [
+        { key: "Адресат", label: "Адресат", kind: "extract", required: true },
+        { key: "Должность автора", label: "Должность автора", kind: "extract", required: true },
+        { key: "ФИО автора", label: "ФИО автора", kind: "extract", required: true },
+        { key: "Номер", label: "Номер", kind: "registry", required: false },
+      ],
+      requisites: { "ФИО автора": "Петров П. П.", "Номер": "42/К" },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "ФИО автора" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: /ФИО автора/ }), {
       target: { value: "Сидоров С. А." },
     });
-    fireEvent.change(screen.getByRole("textbox", { name: "Номер" }), {
-      target: { value: "42/К" },
+    fireEvent.change(screen.getByRole("textbox", { name: /Адресат/ }), {
+      target: { value: "Директору Иванову И. И." },
     });
     const preview = within(
       screen.getByRole("complementary", { name: "Предпросмотр документа" }),
     );
     expect(preview.getByText("Сидоров С. А.")).toBeInTheDocument();
+    expect(preview.getByText("Директору Иванову И. И.")).toBeInTheDocument();
     expect(preview.getByText("№ 42/К")).toBeInTheDocument();
+    // Registry fields are numbered by the office, not typed by the user.
+    expect(screen.queryByRole("textbox", { name: /Номер/ })).not.toBeInTheDocument();
     expect(store.getState().document.requisites).toMatchObject({
-      authorName: "Сидоров С. А.",
-      number: "42/К",
+      "ФИО автора": "Сидоров С. А.",
+      "Адресат": "Директору Иванову И. И.",
     });
   });
 

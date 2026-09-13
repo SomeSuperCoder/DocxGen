@@ -9,6 +9,15 @@ const flag = (defaultValue = false) => z.preprocess(
   z.boolean().default(defaultValue),
 );
 
+/**
+ * Интерпретатор Python из venv, который создаёт `npm run setup:audio`:
+ * на Windows venv кладёт его в Scripts\python.exe, на Linux и macOS — в bin/python.
+ * @param {NodeJS.Platform} [platform]
+ */
+export function defaultVoskPython(platform = process.platform) {
+  return platform === 'win32' ? './.venv-audio/Scripts/python.exe' : './.venv-audio/bin/python';
+}
+
 const envSchema = z.object({
   // Server
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -18,8 +27,6 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   DEBUG_COMMANDS: flag(false),
 
-  // Локальный стенд — эмулятор мессенджера на /dev/chat (без аутентификации, только для разработки)
-  LOCAL_CHAT: flag(false),
 
   // AI
   AI_PROVIDER: z.enum(['openai-compat', 'opencode', 'mock']).default('openai-compat'),
@@ -63,7 +70,8 @@ const envSchema = z.object({
   AUDIO_MAX_BYTES: z.coerce.number().int().positive().default(25 * 1024 * 1024),
   VOSK_MODEL_PATH: z.string().default('./models/vosk-model-small-ru-0.22'),
   FFMPEG_BIN: z.string().default('ffmpeg'),
-  VOSK_PYTHON: z.string().default('./.venv-audio/bin/python'),
+  // Пустое значение — интерпретатор venv для текущей ОС
+  VOSK_PYTHON: z.string().optional().transform((value) => value || defaultVoskPython()),
   // Остаток совместимости для внешнего REST-клиента; внутренние адаптеры работают напрямую.
   DOCUMENT_POLL_INTERVAL_MS: z.coerce.number().positive().default(5000),
 

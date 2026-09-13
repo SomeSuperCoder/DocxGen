@@ -46,7 +46,9 @@ export function createAudioServiceApp({ transcriber, maxBytes = env.AUDIO_MAX_BY
   return app;
 }
 
-if (process.argv[1]?.endsWith('/audio-service.js')) {
+// Сравнение полных путей: на Windows argv[1] содержит обратные слэши, и проверка по «/audio-service.js»
+// никогда не срабатывала — процесс молча завершался с кодом 0.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   let transcriber;
   const configuredModelPath = path.isAbsolute(env.VOSK_MODEL_PATH)
     ? env.VOSK_MODEL_PATH

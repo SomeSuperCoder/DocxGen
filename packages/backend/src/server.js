@@ -20,7 +20,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === entry) {
   const runtime = createRuntime();
   const server = runtime.app.listen(env.PORT, () => {
     const parts = [`http://localhost:${env.PORT}`, `ИИ: ${runtime.provider.name ?? env.AI_PROVIDER}`];
-    if (env.LOCAL_CHAT) parts.push(`стенд: http://localhost:${env.PORT}/dev/chat`);
     if (env.MAX_ENABLED) parts.push(`MAX: ${env.MAX_MODE}`);
     if (env.VK_ENABLED) parts.push(`ВК: ${env.VK_MODE}`);
     log.info({ port: env.PORT }, `DocxGen — ${parts.join(' · ')}`);
