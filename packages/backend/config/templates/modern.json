@@ -3,7 +3,7 @@
   "name": "Современный",
   "description": "Arial 12 пт, интервал 1.15, поля 20/15/20/25 мм, абзацный отступ 12.5 мм, выравнивание по ширине, адресат слева, номер страницы по центру сверху со 2-й страницы",
   "preview": "previews/modern.png",
-  "organization": { "name": "", "address": "г. Москва, ул. Примерная, д. 1", "phone": "+7 (000) 000-00-00" },
+  "organization": { "name": "", "address": "", "phone": "" },
   "page": { "marginsMm": { "top": 20, "right": 15, "bottom": 20, "left": 25 } },
   "font": { "family": "Arial", "sizePt": 12 },
   "paragraph": { "lineSpacing": 1.15, "firstLineIndentMm": 12.5, "align": "justify", "spaceAfterPt": 6 },

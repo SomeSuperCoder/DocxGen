@@ -4,6 +4,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { stripMarkup } from '@/lib/utils';
 import type {
   DocumentState,
   DocumentTypeId,
@@ -107,7 +108,7 @@ export const processText = createAsyncThunk<
     );
 
     return {
-      correctedText: current.version.body.join('\n'),
+      correctedText: current.version.body.map(stripMarkup).filter(Boolean).join('\n'),
       requisites: { ...aiRequisites, ...current.userFields },
       changes: current.version.changes ?? [],
       sourceQuotes: current.version.sourceQuotes ?? Object.fromEntries(Object.entries(current.version.aiFields ?? {}).map(([key, value]) => [key, typeof value === 'object' && value ? value.quote : null])),

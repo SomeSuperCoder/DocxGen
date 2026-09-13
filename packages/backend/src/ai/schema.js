@@ -4,10 +4,14 @@ import { z } from 'zod';
 // Each extracted field has a `value` (normalized) and a `quote` (verbatim snippet from draft).
 // null means "not found / could not extract".
 
-const FieldValue = z.object({
-  value: z.string().trim().min(1),
-  quote: z.string().trim().min(1),
-});
+// Derived fields (Тема) have no verbatim source, so quote may be null; an empty value means "not found".
+const FieldValue = z.preprocess(
+  (raw) => (raw && typeof raw === 'object' && !String(raw.value ?? '').trim() ? null : raw),
+  z.object({
+    value: z.string().trim().min(1),
+    quote: z.string().trim().nullish().transform((q) => q || null),
+  }).nullable(),
+);
 
 // ── Full AI result schema ────────────────────────────────────────────────────
 // title: nullable — AI may leave it unchanged or return null
@@ -18,7 +22,7 @@ const FieldValue = z.object({
 export const AiResultSchema = z.object({
   title: z.string().trim().min(1).nullable(),
   body: z.array(z.string().trim().min(1).max(5000)).min(1).max(50),
-  fields: z.record(z.string(), FieldValue.nullable()).default({}),
+  fields: z.record(z.string(), FieldValue).default({}),
   changes: z.array(z.string()).max(10).default([]),
 });
 

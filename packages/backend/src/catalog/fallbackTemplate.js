@@ -8,7 +8,7 @@ export const FALLBACK_TEMPLATE = {
   name: 'Классический',
   description: 'Times New Roman 14 пт, полуторный интервал, адресат справа вверху, номер страницы сверху по центру со второй страницы',
   preview: null,
-  organization: { name: '', address: 'г. Москва, ул. Примерная, д. 1', phone: '+7 (000) 000-00-00' },
+  organization: { name: '', address: '', phone: '' },
   page: { marginsMm: { top: 20, right: 10, bottom: 20, left: 30 } },
   font: { family: 'Times New Roman', sizePt: 14 },
   paragraph: { lineSpacing: 1.5, firstLineIndentMm: 12.5, align: 'justify', spaceAfterPt: 0 },

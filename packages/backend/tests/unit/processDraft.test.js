@@ -396,7 +396,7 @@ describe('processDraft', () => {
     const retryMessages = provider.complete.mock.calls[1][0];
     expect(retryMessages).toHaveLength(2);
     expect(retryMessages[0].role).toBe('system');
-    expect(retryMessages[0].content).toContain('AiResultSchema');
+    expect(retryMessages[0].content).toContain('схеме ответа');
     expect(retryMessages[1].role).toBe('user');
     expect(retryMessages[1].content).toContain('не прошёл валидацию схемы');
     expect(retryMessages[1].content).toContain('recipient');
@@ -468,7 +468,7 @@ describe('processDraft', () => {
 
     // Retry system message includes original system prompt + schema instructions
     const retrySystemMessage = retryMessages[0].content;
-    expect(retrySystemMessage).toContain('AiResultSchema');
+    expect(retrySystemMessage).toContain('схеме ответа');
     expect(retrySystemMessage).toContain('ВАЖНО');
   });
 

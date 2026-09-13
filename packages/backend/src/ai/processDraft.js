@@ -2,6 +2,43 @@ import { buildMessages } from './prompt.js';
 import { extractJson, AiResultSchema } from './schema.js';
 import { checkGrounding, checkDerivedGrounding } from '../validation/grounding.js';
 import { AiUnavailableError, AiInvalidResponseError } from '../core/errors.js';
+import { stripMarkup } from '../validation/normalize.js';
+
+// Английские ключи, которые модели подставляют вместо русских ключей типа документа.
+const FIELD_KEY_ALIASES = {
+  addressee: 'Адресат', recipient: 'Адресат', to: 'Адресат',
+  subject: 'Тема', topic: 'Тема', title: 'Тема',
+  authorname: 'ФИО автора', author: 'ФИО автора', authorfullname: 'ФИО автора', from: 'ФИО автора',
+  authorposition: 'Должность автора', position: 'Должность автора',
+  authordepartment: 'Наименование подразделения', department: 'Наименование подразделения', subdivision: 'Наименование подразделения',
+  signername: 'ФИО подписывающего', signatoryname: 'ФИО подписывающего',
+  signerposition: 'Должность подписывающего', signatoryposition: 'Должность подписывающего',
+  addresseeorg: 'Организация адресата', recipientorganization: 'Организация адресата',
+  addresseeperson: 'Лицо адресата', addresseeaddress: 'Адрес адресата',
+  salutation: 'Обращение', executor: 'Исполнитель', period: 'Период', date: 'Дата', number: 'Номер',
+  applicantname: 'ФИО заявителя', headname: 'ФИО руководителя', headposition: 'Должность руководителя',
+  chairmanname: 'ФИО председателя', secretaryname: 'ФИО секретаря', protocolnumber: 'Номер протокола',
+};
+
+/**
+ * Resolve a key from the AI answer to a field of the doc type: exact key, label,
+ * case/spacing variants, then the English alias table.
+ */
+function resolveFieldKey(docType, rawKey) {
+  const exact = docType.fields.find(f => f.key === rawKey);
+  if (exact) return exact;
+  const loose = String(rawKey).toLowerCase().replace(/[\s_\-]+/g, '');
+  const byName = docType.fields.find(f =>
+    f.key.toLowerCase().replace(/\s+/g, '') === loose || f.label.toLowerCase().replace(/\s+/g, '') === loose);
+  if (byName) return byName;
+  const alias = FIELD_KEY_ALIASES[loose];
+  return alias ? docType.fields.find(f => f.key === alias) ?? null : null;
+}
+
+function cleanField(fieldVal) {
+  if (!fieldVal) return fieldVal;
+  return { ...fieldVal, value: stripMarkup(fieldVal.value) };
+}
 
 /**
  * Process a draft through the AI pipeline.
@@ -60,7 +97,7 @@ export async function processDraft({ draft, docType, userFields, provider, log, 
     log?.warn({ error: err.message }, 'ai_json_parse_failed, retrying');
     // H6: Rebuild messages with stronger system instruction instead of appending user message
     const retryMessages = [
-      { role: 'system', content: messages[0].content + '\n\nВАЖНО: Отвечай ТОЛЬКО валидным JSON-объектом. Никакого текста до или после JSON. Никаких markdown-обёрток.' },
+      { role: 'system', content: messages[0].content + '\n\nВАЖНО: предыдущий ответ не удалось разобрать как JSON. Верни ровно один JSON-объект по схеме из раздела «Формат ответа»: первый символ ответа — {, последний — }. Никакого текста, пояснений и markdown-обёрток.' },
       { role: 'user', content: messages[1].content },
     ];
     try {
@@ -81,10 +118,10 @@ export async function processDraft({ draft, docType, userFields, provider, log, 
       .map(e => `  - поле «${e.path.join('.')}»: ${e.message}`)
       .join('\n');
     const retryMessages = [
-      { role: 'system', content: messages[0].content + '\n\nВАЖНО: Отвечай ТОЛЬКО валидным JSON-объектом, соответствующим схеме AiResultSchema. Каждое поле в "fields" должно быть объектом { "value": "...", "quote": "..." } или null.' },
+      { role: 'system', content: messages[0].content + '\n\nВАЖНО: ответ должен точно соответствовать схеме ответа из раздела «Формат ответа»: title — строка или null; body — массив от 1 до 50 непустых строк; fields — объект с русскими ключами из списка полей, где каждое значение — { "value": "непустая строка", "quote": "дословная цитата или null" } или null; changes — массив строк, не больше 10.' },
       {
         role: 'user',
-        content: `Черновик:\n<draft>\n${draft}\n</draft>\n\nТвой предыдущий ответ не прошёл валидацию схемы. Ошибки:\n${formattedErrors}\n\nТвой ответ:\n${raw}\n\nИсправь ошибки и верни корректный JSON-объект по той же схеме. Каждое поле в "fields" должно быть объектом { "value": "...", "quote": "..." } или null.`,
+        content: `Черновик:\n<draft>\n${draft}\n</draft>\n\nТвой предыдущий ответ не прошёл валидацию схемы. Ошибки:\n${formattedErrors}\n\nТвой ответ:\n${raw}\n\nИсправь только перечисленные ошибки, сохранив содержание ответа, и верни исправленный JSON-объект целиком — без пояснений и markdown.`,
       },
     ];
     try {
@@ -99,20 +136,36 @@ export async function processDraft({ draft, docType, userFields, provider, log, 
     }
   }
 
+  // Разметку (<b>, **…**) в документ не пропускаем: оформление задаёт шаблон.
+  result.title = result.title ? stripMarkup(result.title) || null : null;
+  const body = result.body.map(stripMarkup).filter(Boolean);
+  if (body.length === 0) throw new AiInvalidResponseError('AI returned an empty body after removing markup');
+  const changes = result.changes.map(stripMarkup).filter(Boolean);
+
   // Step 4: Grounding check on extract AND derived fields
   const aiFields = {};
-  for (const [key, fieldVal] of Object.entries(result.fields)) {
-    const fieldDef = docType.fields.find(f => f.key === key);
-    if (!fieldDef) continue; // Unknown key — discard silently
-
-    if (fieldVal === null) {
-      aiFields[key] = null;
+  for (const [rawKey, rawVal] of Object.entries(result.fields)) {
+    const fieldDef = resolveFieldKey(docType, rawKey);
+    if (!fieldDef) {
+      log?.debug({ key: rawKey }, 'ai_field_unknown_key_dropped');
       continue;
     }
+    const key = fieldDef.key;
+    const fieldVal = cleanField(rawVal);
+
+    if (fieldVal === null) {
+      // Не затираем значение, найденное под другим (алиасным) ключом
+      if (!(key in aiFields)) aiFields[key] = null;
+      continue;
+    }
+    if (!fieldVal.value) continue;
 
     // Grounding check for "extract" kind fields — strict (quote must be in source)
-    if (fieldDef.kind === 'extract' && fieldVal.quote) {
-      const check = checkGrounding(fieldVal.value, fieldVal.quote, draft);
+    if (fieldDef.kind === 'extract') {
+      // No quote → nothing proves the value came from the draft
+      const check = fieldVal.quote
+        ? checkGrounding(fieldVal.value, fieldVal.quote, draft)
+        : { ok: false, reason: 'quote_missing' };
       if (!check.ok) {
         log?.debug({ key, reason: check.reason }, 'field_grounding_failed');
         warnings.push({ key, reason: check.reason, severity: 'grounding' });
@@ -139,9 +192,16 @@ export async function processDraft({ draft, docType, userFields, provider, log, 
     aiFields[key] = fieldVal;
   }
 
+  // The title is written by the prompt's grammar rule («О» + предложный падеж); the Тема field
+  // often comes back in the nominative («Закупка мониторов») and would print as «О Закупка…».
+  const subjectDef = docType.fields.find(f => f.key === 'Тема');
+  if (subjectDef && result.title && /^о\s/i.test(result.title) && !/^о\s/i.test(aiFields['Тема']?.value ?? '')) {
+    aiFields['Тема'] = { value: result.title, quote: null };
+  }
+
   log?.debug({
     title: result.title,
-    paragraphs: result.body.length,
+    paragraphs: body.length,
     fields: Object.fromEntries(Object.entries(aiFields).map(([key, val]) => [key, val?.value ?? null])),
     changes: result.changes,
     warnings: warnings.map((w) => `${w.key}: ${w.reason}`),
@@ -149,9 +209,9 @@ export async function processDraft({ draft, docType, userFields, provider, log, 
 
   return {
     title: result.title,
-    body: result.body,
+    body,
     aiFields,
-    changes: result.changes,
+    changes,
     warnings,
     groundedFields,
   };
