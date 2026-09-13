@@ -1,209 +1,345 @@
-# DocxGen — Документ за 3 шага
+<div align="center">
 
-AI-powered backend that turns Russian text drafts into formatted DOCX documents.
+# 📄 DocxGen
 
-## What It Does
+**AI-powered Russian business document generator**
 
-DocxGen takes a rough draft in Russian and transforms it into a properly formatted, editable DOCX file. The AI handles spelling, grammar, and style corrections while extracting key document requisites (addressee, author, date, etc.).
+Generate ГОСТ-compliant DOCX documents from text drafts with AI-powered correction, field extraction, and professional formatting.
 
-**Workflow:**
-1. User sends a draft (plain text)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js 22](https://img.shields.io/badge/Node.js-22-green.svg)](https://nodejs.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10-orange.svg)](https://pnpm.io/)
+[![TypeScript 6](https://img.shields.io/badge/TypeScript-6-blue.svg)](https://www.typescriptlang.org/)
+[![React 19](https://img.shields.io/badge/React-19-cyan.svg)](https://react.dev/)
+[![Express 5](https://img.shields.io/badge/Express-5-red.svg)](https://expressjs.com/)
+
+</div>
+
+---
+
+## 🎯 Overview
+
+DocxGen is an AI-powered Russian business document generator designed for organizations that need to produce ГОСТ-compliant documents quickly and accurately.
+
+**How it works:**
+1. User provides a text draft (via web UI, MAX bot, or VK bot)
 2. AI corrects spelling, grammar, and style
-3. AI extracts document requisites (addressee, author, etc.)
-4. System validates extracted data against the original draft
-5. DOCX is generated from a configurable template
-6. User downloads the final document
+3. System extracts required requisites (sender, recipient, date, etc.)
+4. DOCX file is rendered in ГОСТ-compliant format
+5. User downloads the finished document
 
-**Supported clients:** Web, MAX-bot, VK-bot
+**Key capabilities:**
+- 🤖 AI-powered text correction and field extraction
+- 📋 4 document types × 2 templates = 8 professional layouts
+- 🎙️ Russian speech recognition (Vosk)
+- 💬 Multi-channel: Web UI + MAX bot + VK bot
+- ✅ ГОСТ Р 7.0.97-2016 compliance checks
+- 📜 Version history with restore capability
 
-**Product extensions:** automatic document-type suggestion with confirmation,
-visible before/after comparison and source quotes for every requisite, DOCX
-letterhead import, employee directory lookup, version history and rollback,
-voice normalization for dates and amounts, MAX browser mini-app, batch DOCX
-processing, and a ГОСТ Р 7.0.97-2016 checklist.
+---
 
-## Quick Start
+## ✨ Features
 
-### Prerequisites
+| Feature | Description |
+|---------|-------------|
+| **AI Text Correction** | Automatic spelling, grammar, and style improvements |
+| **Field Extraction** | AI extracts sender, recipient, date, subject from draft text |
+| **ГОСТ Compliance** | Automated checks against Russian state standard Р 7.0.97-2016 |
+| **Placeholder System** | Russian labels serve as field keys — intuitive for users |
+| **Field Grounding** | AI must quote source text for extracted fields — auditable |
+| **Version History** | Track all document versions with restore capability |
+| **Batch Processing** | Process up to 20 documents simultaneously |
+| **Speech Recognition** | Russian STT via Vosk — dictation to document |
+| **Multi-Channel** | Web UI, MAX messenger bot, VKontakte bot |
+| **File Caching** | Content-hash based deduplication |
+| **Auto Cleanup** | Configurable retention for files and logs |
 
-- Node.js 24+
-- pnpm
-- (Optional) Ollama for local AI processing
+---
 
-### Run Locally
-
-```bash
-npm install
-cp .env.example .env
-npm run dev
-```
-
-`npm run dev` starts both the document service on port 3001 and the audio
-service on port 3005. `pnpm` is also supported when it is installed, but is not
-required.
-
-The bot dialog runs in MAX and VK — enable them in `.env` (see below).
-
-Voice input (web microphone and bot voice messages) needs ffmpeg and a one-time
-setup of Vosk: `cd packages/backend && npm run setup:audio` — see
-[docs/audio-service.md](docs/audio-service.md).
-
-### AI provider
-
-| `AI_PROVIDER` | What you need |
-|---|---|
-| `opencode` | OpenCode CLI — free OpenCode Zen models, no API key: `npm i -g opencode-ai`, then `pnpm opencode:check` |
-| `openai-compat` | `AI_BASE_URL` + `AI_MODEL` (Ollama, vLLM, cloud OpenAI-compatible API) |
-| `mock` | Nothing — the text is not corrected; used by tests and for a quick path to DOCX |
-
-Free OpenCode models answer in 25–90 s and do not accept parallel requests from one address,
-so calls are serialized (`OPENCODE_MAX_PARALLEL=1`).
-
-For container deployments use the repository `Containerfile` and provide the
-same `.env` values to the single backend process. A compose file is not part of
-this repository, so local development uses `pnpm dev`.
-
-## Bots (MAX, VK)
-
-Both bots run inside the same backend process and share the dialog engine, AI pipeline, requisites
-validation and DOCX generator with the web client — only the transport differs.
-
-| Platform | Local (no domain) | Server |
-|---|---|---|
-| VK | `VK_MODE=longpoll` | `VK_MODE=callback` + HTTPS webhook |
-| MAX | `MAX_MODE=polling` | `MAX_MODE=webhook` + HTTPS on port 443 |
-
-Enable a bot with `VK_ENABLED=1` / `MAX_ENABLED=1` and the token in `.env`, then run `pnpm dev`.
-Step-by-step setup (community settings, access rights, tokens, webhooks): [docs/bots-setup.md](docs/bots-setup.md).
-
-MAX note: the MAX API runs on a certificate of the Russian Ministry of Digital Development CA, which is
-missing from the Node.js and Windows trust stores. The root certificate ships in
-`packages/backend/certs/` and is trusted **inside this process only** (`MAX_CA_FILE`), the system store is untouched.
-
-## Logs
-
-Console output is human-readable and colorized; the same stream is written as JSON lines to
-`DATA_DIR/logs/app.log` (grep-friendly, survives closing the terminal). Bot tokens and the AI key
-are redacted in both. Set `LOG_LEVEL=debug` to trace a scenario end to end — incoming bot events,
-dialog state transitions, queue jobs, AI request/response with timings, and DOCX assembly.
+## 🚀 Quick Start
 
 ```bash
-grep '"documentId":"<id>"' packages/backend/data/logs/app.log
+# 1. Install dependencies
+pnpm install
+
+# 2. Configure environment (interactive wizard)
+pnpm setup:env
+
+# 3. (Optional) Set up audio/speech recognition
+pnpm setup:audio
+
+# 4. Start development server
+pnpm dev
 ```
 
-## Architecture
+**Access the application:**
+- **Frontend:** http://localhost:5173 (Vite dev server)
+- **Backend API:** http://localhost:3000
+
+The Vite dev server automatically proxies `/api` requests to the backend.
+
+---
+
+## ⚙️ Setup Scripts
+
+### `pnpm setup:env` — Environment Configuration
+
+Interactive `.env` configuration wizard. Run from project root:
+
+```bash
+pnpm setup:env
+```
+
+This launches an interactive CLI that walks you through:
+
+| Section | What It Configures |
+|---------|-------------------|
+| **Server** | Port, public URL, data directory, log level |
+| **AI Provider** | OpenAI, OpenCode CLI, or mock mode |
+| **AI Settings** | API keys, runtime, model selection |
+| **Bots** | MAX and VK integrations (optional) |
+
+**Features:**
+- Creates `.env` file in project root
+- Can be re-run to update existing configuration
+- Validates inputs at each step
+- Provides sensible defaults
+
+### `pnpm setup:audio` — Speech Recognition Service
+
+Sets up the Vosk-based audio/speech recognition service:
+
+```bash
+pnpm setup:audio
+```
+
+**This script:**
+1. Checks for `ffmpeg` in PATH (required for audio processing)
+2. Creates Python virtual environment at `packages/backend/.venv-audio`
+3. Installs the `vosk` Python package
+4. Downloads the Russian Vosk model (`vosk-model-small-ru-0.22`) if not present
+
+**Prerequisites:**
+- Python 3.x installed
+- `ffmpeg` installed on system
+
+**What it enables:**
+- Voice message transcription in Russian
+- Microphone dictation in the web UI
+- Audio processing for bot channels
+
+---
+
+## 🏗️ Architecture
 
 ```mermaid
 flowchart LR
-    U[Client] -->|REST API| A[Express Server]
-    A --> D[DocumentService]
-    D --> Q[Job Queue]
-    Q --> W[Worker]
-    W --> AI[AI Processing]
-    AI --> V[Validation]
-    V --> R[Requisites Merge]
-    R --> X[DOCX Generator]
-    X --> FS[(File Storage)]
-    D --> DB[(SQLite)]
+  WEB[Web application] --> API[HTTP API]
+  MAX[MAX adapter] --> FLOW[Dialog flow]
+  VK[VK adapter] --> FLOW
+  FLOW -. voice messages .-> STT[Audio service / Vosk]
+  API -. microphone .-> STT
+  API --> DOC[Document service]
+  FLOW --> DOC
+  DOC --> Q[SQLite job queue]
+  Q --> W[Worker]
+  W --> AI[AI provider]
+  W --> VALIDATE[Requisites and grounding checks]
+  W --> DOCX[DOCX renderer]
+  DOC --> DB[(SQLite)]
+  DOCX --> FILES[(File storage)]
 ```
 
-**Key components:**
-- **Express Server** — REST API + bot adapters
-- **DocumentService** — Single point of entry for all operations
-- **Job Queue** — SQLite-backed, idempotent processing
-- **AI Module** — OpenAI-compatible provider (Ollama, vLLM, etc.)
-- **Validation** — Grounding checks + fact comparison
-- **DOCX Generator** — Programmatic document creation using `docx` library
-- **File Storage** — Local filesystem with caching
+**Data flow:**
+1. User submits text via Web UI, MAX, or VK
+2. Document service creates a job in SQLite queue
+3. Worker processes job: AI corrects text → extracts fields → validates
+4. DOCX renderer generates ГОСТ-compliant document
+5. File stored and served to user
 
-## API
+---
 
-Brief overview. For full reference, see [docs/api.md](docs/api.md).
+## 📡 API Reference
 
-### Core Endpoints
+### Authentication
+Cookie-based identity — no login required. User identity is automatic.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | /api/documents | Create a document |
-| POST | /api/documents/:id/process | Run AI processing |
-| POST | /api/documents/:id/render | Generate DOCX |
-| GET | /api/files/:fileId | Download the file |
-| GET | /api/documents/:id | Get document status |
-| PUT | /api/documents/:id/fields | Set field values |
+### Endpoints
 
-### Full API Reference
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+| `GET` | `/api/catalog` | Available document types and templates |
+| `POST` | `/api/documents` | Create new document |
+| `POST` | `/api/documents/:id/process` | Start AI processing (async) |
+| `PATCH` | `/api/documents/:id` | Update document |
+| `PUT` | `/api/documents/:id/fields` | Set field values |
+| `POST` | `/api/documents/:id/render` | Render to DOCX |
+| `GET` | `/api/files/:fileId` | Download DOCX file |
+| `POST` | `/api/audio/transcribe` | Speech-to-text (Russian) |
+| `GET` | `/api/documents/:id/versions` | Version history |
+| `POST` | `/api/documents/:id/retry` | Retry after AI failure |
 
-→ [docs/api.md](docs/api.md)
+**Full API documentation:** [docs/api.md](docs/api.md)
 
-## Integration Examples
+---
 
-For practical integration examples (curl, JavaScript, Python), see:
+## 📑 Document Types
 
-→ [docs/integration-guide.md](docs/integration-guide.md)
+| Type | Russian Name | Purpose |
+|------|--------------|---------|
+| **Memo** | Служебная записка | Internal memo between departments |
+| **Report** | Докладная записка | Report memo to management |
+| **Reference** | Информационная справка | Factual summary for audits/archives |
+| **Letter** | Письмо | Official organizational letter |
 
-## Configuration
+### Templates
 
-Key environment variables:
+| Template | Russian Name | Style |
+|----------|--------------|-------|
+| **Classic** | Классический | Times New Roman 14pt, 1.5 line spacing, traditional corporate layout |
+| **Modern** | Современный | Arial 12pt, 1.15 line spacing, contemporary regulatory layout |
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | 3000 |
-| `DATA_DIR` | Data storage directory | ./data |
-| `LOG_LEVEL` | `debug` traces bot events, dialog transitions, queue jobs and AI timings | info |
-| `AI_PROVIDER` | AI provider type | openai-compat |
-| `AI_BASE_URL` | AI API endpoint | http://localhost:11434/v1 |
-| `AI_MODEL` | AI model name | qwen2.5:7b-instruct |
-| `AI_TEMPERATURE` | AI temperature | 0.1 |
-| `AI_TIMEOUT_MS` | AI request timeout | 90000 |
-| `AI_FAULT` | Simulate AI failures | off |
-| `OPENCODE_MODEL` | Override the model of the doc-editor agent | (agent default) |
-| `OPENCODE_MAX_PARALLEL` | Parallel AI calls (free models allow 1) | 1 |
-| `MAX_ENABLED` | Enable MAX bot | 0 |
-| `MAX_MODE` | polling (local) or webhook (server) | webhook |
-| `MAX_CA_FILE` | Ministry of Digital Development root CA for the MAX API | certs/russian_trusted_root_ca.pem |
-| `VK_ENABLED` | Enable VK bot | 0 |
-| `VK_MODE` | longpoll (local) or callback (server) | callback |
-| `CLEANUP_ENABLED` | Enable automatic cleanup | 1 |
+---
 
-Full list: see [.env.example](.env.example)
+## 🤖 AI Providers
 
-## Document Types
+| Provider | API Key | Description |
+|----------|---------|-------------|
+| `opencode` | Not required | OpenCode CLI with free models |
+| `openai` | Required | OpenAI-compatible API (any provider) |
+| `mock` | Not required | No AI, deterministic output (for testing) |
 
-| Type | Description |
-|------|-------------|
-| memo | Служебная записка (internal memo) |
-| report | Докладная записка (report memo) |
-| reference | Информационная справка (informational reference) |
-| letter | Письмо (letter) |
+**Configuration:** Set `AI_PROVIDER` in `.env` file via `pnpm setup:env`.
 
-## Templates
+---
 
-| Template | Style |
-|----------|-------|
-| classic | Times New Roman 14pt, traditional corporate layout |
-| modern | Arial 12pt, contemporary regulatory layout |
+## 📁 Project Structure
 
-## Development
-
-```bash
-pnpm test          # Run tests
-pnpm run eval      # Evaluate AI quality
-pnpm typecheck     # Type checking
-pnpm build         # Build project
+```
+DocxGen/
+├── packages/
+│   ├── backend/          # Express 5 API + document service
+│   │   ├── config/       # doc-types/*.json, templates/*.json
+│   │   └── src/
+│   │       ├── ai/       # AI pipeline (prompt, process, parse)
+│   │       ├── audio/    # Vosk STT client
+│   │       ├── core/     # documentService (lifecycle, render)
+│   │       ├── docx/     # OOXML blocks, render, units
+│   │       ├── jobs/     # Queue, worker
+│   │       ├── http/     # REST API routes
+│   │       ├── bot/      # Dialog flow state machine
+│   │       └── adapters/ # MAX, VK platform adapters
+│   └── frontend/         # React 19 + Vite + Tailwind
+├── scripts/              # Setup wizards (setup-env.js, setup-audio.mjs)
+├── prompts/              # AI system prompt (system.md)
+├── docs/                 # Architecture, API, templates, fields reference
+├── examples/             # Example documents
+├── Containerfile         # Docker/Podman build
+└── package.json          # Root workspace config
 ```
 
-## Documentation
+---
 
-- [API Reference](docs/api.md) — Full REST API documentation
-- [Bots setup](docs/bots-setup.md) — VK community and MAX bot, step by step (in Russian)
-- [Integration Guide](docs/integration-guide.md) — Practical examples for web, bot, and third-party integrations
-- [Architecture](docs/architecture.md) — Single backend and adapter architecture
-- [Document generation](docs/document-generation.md) — Placeholder-based DOCX generation and Russian field keys
-- [Audio service](docs/audio-service.md) — Speech recognition for the web microphone and bot voice messages
-- [AI processing](docs/ai.md) — Providers, validation, retries and debug logging
-- [Adding types/templates](docs/adding-type-or-template.md) — Catalog extension guide
-- [Limitations](docs/limitations.md) — Deployment and provider constraints
+## 🛠️ Available Scripts
 
-## License
+| Command | Description |
+|---------|-------------|
+| `pnpm install` | Install all dependencies |
+| `pnpm setup:env` | Interactive environment configuration |
+| `pnpm setup:audio` | Set up Vosk speech recognition |
+| `pnpm dev` | Start full development stack |
+| `pnpm start` | Start backend + audio (no frontend) |
+| `pnpm build` | Build all packages |
+| `pnpm test` | Run test suite (Vitest) |
+| `pnpm typecheck` | Type-check all packages |
 
-[Your License]
+---
+
+## 💬 Bot Setup
+
+### MAX Bot (Russian Messenger)
+
+- **Local development:** Polling mode
+- **Production:** Webhook mode
+
+### VK Bot (VKontakte)
+
+- **Local development:** Long Poll mode
+- **Production:** Callback API mode
+
+**Detailed setup instructions:** [docs/bots-setup.md](docs/bots-setup.md)
+
+---
+
+## ⚠️ Limitations
+
+| Limitation | Workaround |
+|------------|------------|
+| SQLite is local to `DATA_DIR` | Use persistent volume for deployment |
+| Polling modes for local dev only | Production needs HTTPS + webhook/callback |
+| Mock AI is deterministic | Use `opencode` or `openai` for real corrections |
+| OpenCode runtime requires CLI | Install OpenCode CLI or use containerized build |
+| Files cleaned up after retention period | Download files before cleanup |
+
+---
+
+## 📚 Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/architecture.md) | System design and data flow |
+| [REST API](docs/api.md) | Complete API reference |
+| [Document Generation](docs/document-generation.md) | How documents are created |
+| [Templates](docs/TEMPLATES.md) | Template system reference |
+| [Fields Reference](docs/FIELDS-REFERENCE.md) | All document fields |
+| [Placeholder Protocol](docs/PLACEHOLDER-PROTOCOL.md) | Placeholder system docs |
+| [AI Processing](docs/ai.md) | AI pipeline details |
+| [Audio Service](docs/audio-service.md) | Vosk STT integration |
+| [Bot Setup](docs/bots-setup.md) | MAX and VK bot configuration |
+| [Integration Guide](docs/integration-guide.md) | How to integrate with DocxGen |
+| [Adding Types/Templates](docs/adding-type-or-template.md) | Extend document types |
+| [Current Limitations](docs/limitations.md) | Known issues and constraints |
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
+
+### Development Guidelines
+
+- Use `pnpm` as package manager (never npm/npx)
+- Follow existing code style
+- Add tests for new features
+- Update documentation as needed
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [docx](https://github.com/dolanmiu/docx) — OOXML document generation
+- [Vosk](https://alphacephei.com/vosk/) — Russian speech recognition
+- [vk-io](https://github.com/node-libs/vk-io) — VKontakte and MAX bot integration
+- [Radix UI](https://www.radix-ui.com/) — Accessible React components
+- [Framer Motion](https://www.framer.com/motion/) — Animation library
+
+---
+
+<div align="center">
+
+**Built with ❤️ for Russian business document automation**
+
+</div>
