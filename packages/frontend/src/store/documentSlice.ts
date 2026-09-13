@@ -220,6 +220,13 @@ const documentSlice = createSlice({
     setText(state, action: PayloadAction<string>) {
       state.text = action.payload;
     },
+    /** Надиктованный фрагмент дописывается с новой строки — черновик можно наговорить по частям. */
+    appendText(state, action: PayloadAction<string>) {
+      const addition = action.payload.trim();
+      if (!addition) return;
+      const current = state.text.trimEnd();
+      state.text = current ? `${current}\n${addition}` : addition;
+    },
     setCorrectedText(state, action: PayloadAction<string>) {
       state.correctedText = action.payload;
     },
@@ -340,6 +347,7 @@ const documentSlice = createSlice({
 
 export const {
   setText,
+  appendText,
   setCorrectedText,
   setRequisites,
   setDocumentType,

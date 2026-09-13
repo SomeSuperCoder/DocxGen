@@ -4,6 +4,7 @@ import path from 'node:path';
 import { rateLimiter } from './rateLimiter.js';
 import { apiKeyAuth } from './apiKeyAuth.js';
 import { ownerHeaders } from './ownerHeaders.js';
+import { readMultipartFile } from '../audio/multipart.js';
 
 /**
  * REST API router — all document methods delegate to documentService.
@@ -20,7 +21,7 @@ import { ownerHeaders } from './ownerHeaders.js';
  * @returns {Router}
  */
 export function createApiRouter(deps = {}) {
-  const { documentService, docTypes, templates, fileStorage, log, faultManager, debugCommands } = deps;
+  const { documentService, docTypes, templates, fileStorage, log, faultManager, debugCommands, audioClient, audioMaxBytes = 25 * 1024 * 1024 } = deps;
   const router = Router();
 
   // Rate limit mutating routes only (POST/PUT/PATCH/DELETE)
@@ -74,6 +75,22 @@ export function createApiRouter(deps = {}) {
       faultManager.armOnce(ownerKey);
       log?.debug?.({ ownerKey }, 'имитация сбоя ИИ взведена');
       res.status(202).json({ armed: true });
+    });
+  }
+
+  // ── Speech recognition ────────────────────────────────────────────────────
+  // Микрофон и загрузка аудио на сайте. Браузер ходит только в backend, как и за остальными
+  // /api: владелец берётся из cookie сессии, ключ аудиосервиса остаётся на сервере.
+  if (audioClient) {
+    router.post('/api/audio/transcribe', mutate, async (req, res) => {
+      const file = await readMultipartFile(req, audioMaxBytes);
+      try {
+        const result = await audioClient.transcribe(file, { platform: req.owner.platform, ownerId: req.owner.id });
+        res.json({ ok: true, text: result.text, duration: result.duration });
+      } catch (err) {
+        log?.warn?.({ code: err.code, error: err.message, detail: err.detail, bytes: file.length }, 'аудио с сайта не распознано');
+        throw err;
+      }
     });
   }
 

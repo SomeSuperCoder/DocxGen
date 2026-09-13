@@ -16,11 +16,7 @@ export default defineConfig(({ mode }) => {
       // «отказано в подключении». 127.0.0.1 доступен и как localhost, и напрямую.
       host: '127.0.0.1',
       proxy: {
-        '/api/audio': {
-          target: `http://127.0.0.1:${env.AUDIO_SERVICE_PORT || '3005'}`,
-          changeOrigin: true,
-          ...(env.API_KEY ? { headers: { 'X-API-Key': env.API_KEY } } : {}),
-        },
+        // /api/audio тоже идёт в backend: он добавляет владельца из cookie и ключ аудиосервиса.
         '/api': target,
         '/health': target,
       },

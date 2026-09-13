@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFlow } from '../../src/bot/flow.js';
-import { encode } from '../../src/bot/payload.js';
+import { decode, encode } from '../../src/bot/payload.js';
 
 // ── Mock data ────────────────────────────────────────────────────────────
 
@@ -195,7 +195,8 @@ describe('flow', () => {
     // Start from idle with /start
     const r1 = await flow.handle(conv, commandEvent('start'));
     expect(r1[0].text).toContain('Здравствуйте');
-    expect(r1[0].buttons).toBeDefined();
+    // Приветствие сразу просит черновик — кнопки «Создать документ» больше нет
+    expect(r1[0].buttons).toBeUndefined();
 
     // User sends text → creates doc, moves to collecting
     const r2 = await flow.handle(conv, makeEvent({ text: 'Текст черновика' }));
@@ -413,7 +414,7 @@ describe('flow', () => {
     const r = await flow.handle(conv, makeEvent({ text: 'Мой черновик' }));
     expect(conv.state).toBe('collecting');
     expect(conv.documentId).toBeTruthy();
-    expect(r[0].text).toContain('Принято');
+    expect(r[0].text).toContain('Добавил в черновик');
   });
 
   it('collecting + continue with empty draft returns error', async () => {
@@ -426,7 +427,7 @@ describe('flow', () => {
 
     const conv = makeConversation({ state: 'collecting', documentId: 'doc-1' });
     const r = await flow.handle(conv, actionEvent({ a: 'continue', r: conv.stateVersion }));
-    expect(r[0].text).toContain('Черновик пуст');
+    expect(r[0].text).toContain('В черновике пока пусто');
     expect(conv.state).toBe('collecting');
   });
 
@@ -521,7 +522,9 @@ describe('flow', () => {
     expect(conv.state).toBe('collecting');
     // New doc should have been created with a new ID
     expect(conv.documentId).toBeTruthy();
-    expect(r[0].buttons).toBeDefined();
+    // Под пустым черновиком кнопок нет: «Готово» появится после первого текста
+    expect(r[0].buttons).toBeUndefined();
+    expect(r[0].text).toContain('Шаг 1 из 3');
   });
 
   it('unknown state returns error with main keyboard', async () => {
@@ -625,7 +628,7 @@ describe('flow', () => {
     expect(transcribeAudio).toHaveBeenCalledWith(audio, { platform: 'max', ownerId: 'user-1' });
     expect(r[0]).toMatchObject({ format: 'html' });
     expect(r[0].text).toContain('прошу выделить ноутбук');
-    expect(r[1].text).toContain('Принято');
+    expect(r[1].text).toContain('Добавил в черновик');
     expect(conv.state).toBe('collecting');
     expect(docs.get(conv.documentId).source_text).toBe('прошу выделить ноутбук');
   });
@@ -641,6 +644,140 @@ describe('flow', () => {
     expect(r[0]).toMatchObject({ format: 'html' });
     expect(r[0].text).toContain('Не удалось распознать');
     expect(conv.state).toBe('idle');
+  });
+
+  it('adds a voice message to the draft that is being collected', async () => {
+    const transcribeAudio = vi.fn(async () => ({ text: 'для нового сотрудника' }));
+    const voiceFlow = createFlow({ docServiceClient: client, docTypes: mockDocTypesService(), templates: mockTemplatesService(), log: mockLog, transcribeAudio });
+    const conv = makeConversation();
+    await voiceFlow.handle(conv, makeEvent({ text: 'Прошу выделить ноутбук' }));
+
+    await voiceFlow.handle(conv, makeEvent({ kind: 'audio', audio: { type: 'audio', payload: { url: 'u' } } }));
+
+    expect(conv.state).toBe('collecting');
+    expect(docs.get(conv.documentId).source_text).toBe('Прошу выделить ноутбук\nдля нового сотрудника');
+  });
+
+  it('does not transcribe a voice message while the document is processing', async () => {
+    const transcribeAudio = vi.fn(async () => ({ text: 'ещё текст' }));
+    const voiceFlow = createFlow({ docServiceClient: client, docTypes: mockDocTypesService(), templates: mockTemplatesService(), log: mockLog, transcribeAudio });
+    const conv = makeConversation({ state: 'processing', documentId: 'doc-1', stateVersion: 3 });
+
+    const r = await voiceFlow.handle(conv, makeEvent({ kind: 'audio', audio: { type: 'audio', payload: { url: 'u' } } }));
+
+    expect(transcribeAudio).not.toHaveBeenCalled();
+    expect(r).toHaveLength(1);
+    expect(r[0].text).toContain('Обработка ещё идёт');
+    expect(conv.state).toBe('processing');
+  });
+
+  it('keeps a voice message out of a requisite and asks to type the answer', async () => {
+    const transcribeAudio = vi.fn(async () => ({ text: 'петров пётр петрович' }));
+    const voiceFlow = createFlow({ docServiceClient: client, docTypes: mockDocTypesService(), templates: mockTemplatesService(), log: mockLog, transcribeAudio });
+    const doc = await client.withOwner({ platform: 'max', id: 'user-1' }).createDocument({});
+    const conv = makeConversation({ state: 'asking_field', documentId: doc.id, pendingField: 'ФИО автора', stateVersion: 5 });
+
+    const r = await voiceFlow.handle(conv, makeEvent({ kind: 'audio', audio: { type: 'audio', payload: { url: 'u' } } }));
+
+    expect(transcribeAudio).not.toHaveBeenCalled();
+    expect(JSON.parse(docs.get(doc.id).user_fields)).toEqual({});
+    expect(conv.state).toBe('asking_field');
+    expect(conv.pendingField).toBe('ФИО автора');
+    expect(r).toHaveLength(1);
+    expect(r[0].text).toMatch(/текстом/);
+    expect(r[0].buttons).toBeDefined();
+  });
+
+  it('keeps a voice message out of the corrected text while editing', async () => {
+    const transcribeAudio = vi.fn(async () => ({ text: 'о закупке бумаги' }));
+    const voiceFlow = createFlow({ docServiceClient: client, docTypes: mockDocTypesService(), templates: mockTemplatesService(), log: mockLog, transcribeAudio });
+    const conv = makeConversation({ state: 'editing', documentId: 'doc-1', stateVersion: 6 });
+
+    const r = await voiceFlow.handle(conv, makeEvent({ kind: 'audio', audio: { type: 'audio', payload: { url: 'u' } } }));
+
+    expect(transcribeAudio).not.toHaveBeenCalled();
+    expect(conv.state).toBe('editing');
+    expect(r).toHaveLength(1);
+    expect(r[0].text).toMatch(/текстом/);
+  });
+
+  it.each(['choose_type', 'choose_template', 'confirm_warnings', 'ai_failed', 'ready'])(
+    'answers a voice message at %s with the keyboard of that step, without transcribing',
+    async (state) => {
+      const transcribeAudio = vi.fn(async () => ({ text: 'служебная записка' }));
+      const voiceFlow = createFlow({ docServiceClient: client, docTypes: mockDocTypesService(), templates: mockTemplatesService(), log: mockLog, transcribeAudio });
+      const conv = makeConversation({ state, documentId: 'doc-1', stateVersion: 7 });
+
+      const r = await voiceFlow.handle(conv, makeEvent({ kind: 'audio', audio: { type: 'audio', payload: { url: 'u' } } }));
+
+      expect(transcribeAudio).not.toHaveBeenCalled();
+      expect(conv.state).toBe(state);
+      expect(conv.stateVersion).toBe(7);
+      expect(r).toHaveLength(1);
+      expect(r[0].text).toMatch(/голосом можно прислать только черновик/i);
+      expect(r[0].buttons?.length).toBeGreaterThan(0);
+    },
+  );
+
+  // ── Понятный путь пользователя ─────────────────────────────────────────
+
+  const actionsOf = (reply) => (reply.buttons ?? []).flat().map((button) => decode(button.action).a);
+  const labelsOf = (reply) => (reply.buttons ?? []).flat().map((button) => button.label);
+
+  it('greets with an invitation to send the draft, without a separate «Создать документ» step', async () => {
+    const conv = makeConversation();
+
+    const [greeting] = await flow.handle(conv, commandEvent('start'));
+    expect(greeting.text).toMatch(/Пришлите черновик/);
+    expect(greeting.buttons).toBeUndefined();
+
+    const [accepted] = await flow.handle(conv, makeEvent({ text: 'Прошу выделить ноутбук' }));
+    expect(conv.state).toBe('collecting');
+    expect(actionsOf(accepted)).toContain('continue');
+  });
+
+  it('shows the button to go on only when the draft already has text', async () => {
+    const conv = makeConversation();
+
+    const [start] = await flow.handle(conv, commandEvent('new'));
+    expect(conv.state).toBe('collecting');
+    expect(start.buttons).toBeUndefined();
+
+    const [accepted] = await flow.handle(conv, makeEvent({ text: 'Прошу выделить ноутбук' }));
+    expect(actionsOf(accepted)[0]).toBe('continue');
+  });
+
+  it('offers a way back at the type and the template steps', async () => {
+    const conv = makeConversation();
+    await flow.handle(conv, makeEvent({ text: 'Прошу выделить ноутбук' }));
+
+    const [types] = await flow.handle(conv, actionEvent({ a: 'continue', r: conv.stateVersion }));
+    expect(actionsOf(types)).toContain('back');
+
+    const [templatesReply] = await flow.handle(conv, actionEvent({ a: 'set_type', v: 'memo', r: conv.stateVersion }));
+    expect(actionsOf(templatesReply)).toContain('back');
+
+    await flow.handle(conv, actionEvent({ a: 'back', r: conv.stateVersion }));
+    expect(conv.state).toBe('choose_type');
+  });
+
+  it('labels template buttons with the name only — VK cuts a label at 40 characters', async () => {
+    const conv = makeConversation();
+    await flow.handle(conv, makeEvent({ text: 'Прошу выделить ноутбук' }));
+    await flow.handle(conv, actionEvent({ a: 'continue', r: conv.stateVersion }));
+
+    const [templatesReply] = await flow.handle(conv, actionEvent({ a: 'set_type', v: 'memo', r: conv.stateVersion }));
+
+    expect(labelsOf(templatesReply)).toEqual(expect.arrayContaining(['Классический', 'Современный']));
+    for (const label of labelsOf(templatesReply)) expect(label.length, label).toBeLessThanOrEqual(40);
+  });
+
+  it('mentions voice messages in VK, where they reach the bot, but not in MAX', async () => {
+    const [vkGreeting] = await flow.handle(makeConversation({ platform: 'vk' }), makeEvent({ platform: 'vk', kind: 'command', command: 'start' }));
+    const [maxGreeting] = await flow.handle(makeConversation(), commandEvent('start'));
+
+    expect(vkGreeting.text).toMatch(/голосов/);
+    expect(maxGreeting.text).not.toMatch(/голосов/);
   });
 
   it('escapes the user draft before sending it back as HTML', async () => {

@@ -32,6 +32,28 @@ describe('bot texts', () => {
     expect(texts.askField(field, 3).text).not.toMatch(/\d из \d/);
   });
 
+  /** Все места, где бот просит черновик. */
+  const draftPrompts = (options) => ({
+    greeting: texts.greeting(null, options).text,
+    collectDraftStart: texts.collectDraftStart(options),
+    collectDraftAccepted: texts.collectDraftAccepted(120, options).text,
+    pressCreate: texts.pressCreate(options),
+    newDocument: texts.newDocument(options),
+    draftEmpty: texts.draftEmpty(options),
+    replaceMode: texts.replaceMode(options),
+  });
+
+  it('offers a voice message wherever the bot asks for a draft', () => {
+    for (const [name, text] of Object.entries(draftPrompts({ voice: true }))) expect(text, name).toMatch(/голос/i);
+    expect(texts.help({ voice: true })).toMatch(/Голосовые распознаю/);
+  });
+
+  it('does not promise voice messages on a platform that does not deliver them to bots (MAX)', () => {
+    for (const [name, text] of Object.entries(draftPrompts({ voice: false }))) expect(text, name).not.toMatch(/голос/i);
+    expect(texts.help({ voice: false })).not.toMatch(/Голосовые распознаю/);
+    expect(texts.help({ voice: false })).toMatch(/на сайте/);
+  });
+
   it('highlights step headers in bold', () => {
     expect(texts.collectDraftStart()).toMatch(/<b>Шаг 1 из 3/);
     expect(texts.chooseType([{ name: 'Служебная записка', hint: 'внутри' }]).text).toMatch(/<b>Шаг 2 из 3/);

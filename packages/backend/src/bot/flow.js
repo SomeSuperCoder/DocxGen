@@ -49,6 +49,19 @@ function say(result, extra = {}) {
   return { text: textOf(result), format: 'html', ...extra };
 }
 
+/** Steps where a voice message becomes (part of) the draft. */
+const VOICE_DRAFT_STATES = new Set(['idle', 'collecting']);
+
+/**
+ * How the draft can be sent on this platform. The MAX Bot API delivers a voice message without its
+ * content (no chat, no attachment), so the MAX texts do not offer voice; VK delivers audio_message.
+ * @param {{ platform?: string }} conversation
+ * @returns {import('./texts.js').InputOptions}
+ */
+function inputOptions(conversation) {
+  return { voice: conversation.platform !== 'max' };
+}
+
 /** Illustration shipped in assets/bot (see adapters/common/botImages.js). */
 const image = (name) => ({ name });
 
@@ -104,7 +117,16 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
       // A voice message carries the platform attachment (a link) or an already downloaded buffer.
       // Its transcription is handled exactly like a typed draft, preserving the FSM and grounding;
       // the transcript is echoed first so the user sees what was recognized.
+      // Only the draft is accepted by voice: the AI corrects it later. A requisite or the edited text
+      // would reach the document as recognized — lowercase, without punctuation, numbers in words —
+      // and on the other steps the text would be dropped, so Vosk is not called there at all.
       if (event.kind === 'audio') {
+        if (conversation.state === 'processing') return [say(texts.busy())];
+        if (!VOICE_DRAFT_STATES.has(conversation.state)) {
+          const expectsText = conversation.state === 'asking_field' || conversation.state === 'editing';
+          const buttons = this._currentKeyboard(conversation);
+          return [say(texts.voiceOnlyForDraft(expectsText), buttons ? { buttons } : {})];
+        }
         if (typeof transcribeAudio !== 'function' || !event.audio) {
           return [say(texts.audioUnavailable())];
         }
@@ -124,14 +146,16 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
       // ── Commands ────────────────────────────────────────────────────
       if (event.kind === 'command') {
         if (event.command === 'help') {
-          return [say(texts.help(), { buttons: this._currentKeyboard(conversation) })];
+          const buttons = this._currentKeyboard(conversation);
+          return [say(texts.help(inputOptions(conversation)), buttons ? { buttons } : {})];
         }
         // Scenario 6: simulate an AI outage for this user only (guarded by DEBUG_COMMANDS)
         if (event.command === 'ai_fail') {
           if (!debugCommands) return [say(texts.commandDisabled())];
           // Флаг взводится в сервисе документов — ИИ работает там, а не здесь
           await clientFor({ platform: event.platform, id: event.userId }).armAiFault();
-          return [say(texts.aiFaultArmed(), { buttons: this._currentKeyboard(conversation) })];
+          const buttons = this._currentKeyboard(conversation);
+          return [say(texts.aiFaultArmed(), buttons ? { buttons } : {})];
         }
         if (event.command === 'new') return this._startDocument(conversation, event);
 
@@ -194,9 +218,9 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         await clientFor(owner).setDraft(doc.id, event.text, { mode: 'replace' });
         conversation.state = 'collecting';
         conversation.stateVersion++;
-        return [say(texts.collectDraftAccepted(event.text.length), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
+        return [say(texts.collectDraftAccepted(event.text.length, inputOptions(conversation)), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
       }
-      return [say(texts.pressCreate(), { buttons: keyboards.mainKeyboard(conversation.stateVersion) })];
+      return [say(texts.pressCreate(inputOptions(conversation)))];
     },
 
     async _handleCollecting(conversation, event) {
@@ -206,7 +230,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         if (event.action?.a === 'continue') {
           const doc = await clientFor(owner).getDocument(conversation.documentId);
           if (!doc.sourceText) {
-            return [say(texts.draftEmpty())];
+            return [say(texts.draftEmpty(inputOptions(conversation)))];
           }
           conversation.state = 'choose_type';
           conversation.stateVersion++;
@@ -219,7 +243,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         }
         if (event.action?.a === 'replace_mode') {
           conversation.ctx = { ...conversation.ctx, inputMode: 'replace' };
-          return [say(texts.replaceMode())];
+          return [say(texts.replaceMode(inputOptions(conversation)))];
         }
       }
 
@@ -229,7 +253,7 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         // Reset to append after replace
         conversation.ctx = { ...conversation.ctx, inputMode: 'append' };
         const doc = await clientFor(owner).getDocument(conversation.documentId);
-        return [say(texts.collectDraftAccepted(doc.sourceText.length), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
+        return [say(texts.collectDraftAccepted(doc.sourceText.length, inputOptions(conversation)), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
       }
 
       return [];
@@ -325,7 +349,8 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
         conversation.documentId = doc.id;
         conversation.state = 'collecting';
         conversation.stateVersion++;
-        return [say(texts.newDocument(), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
+        // Без кнопок: под пустым черновиком «Готово» ведёт в тупик — кнопка появится после первого текста
+        return [say(texts.newDocument(inputOptions(conversation)))];
       }
 
       return [];
@@ -483,12 +508,13 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
       conversation.pendingField = null;
       conversation.state = 'collecting';
       conversation.stateVersion++;
-      return [say(texts.collectDraftStart(), { buttons: keyboards.draftKeyboard(conversation.stateVersion) })];
+      // Без кнопок: под пустым черновиком «Готово» ведёт в тупик — кнопка появится после первого текста
+      return [say(texts.collectDraftStart(inputOptions(conversation)))];
     },
 
     /** Welcome screen with the «Документ за 3 шага» banner. */
     _greeting(conversation) {
-      return say(texts.greeting(conversation.profile), { buttons: keyboards.mainKeyboard(conversation.stateVersion), image: image('greeting') });
+      return say(texts.greeting(conversation.profile, inputOptions(conversation)), { image: image('greeting') });
     },
 
     /** Document type choice with the card of all types. */
@@ -504,6 +530,15 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
     },
 
     /**
+     * Keyboard of the current step for replies outside the flow (a stale button in the dispatcher).
+     * @param {object} conversation
+     * @returns {Array|undefined}
+     */
+    currentKeyboard(conversation) {
+      return this._currentKeyboard(conversation);
+    },
+
+    /**
      * Keyboard of the current step — appended to informational replies (/help, /ai_fail)
      * so the user always has something to press.
      * @param {object} conversation
@@ -511,7 +546,6 @@ export function createFlow({ docServiceClient, docTypes, templates, faultManager
      */
     _currentKeyboard(conversation) {
       switch (conversation.state) {
-        case 'idle': return keyboards.mainKeyboard(conversation.stateVersion);
         case 'collecting': return keyboards.draftKeyboard(conversation.stateVersion);
         case 'choose_type': return keyboards.typeKeyboard(docTypes.list(), conversation.stateVersion);
         case 'choose_template': return keyboards.templateKeyboard(templates.list(), conversation.stateVersion);

@@ -86,9 +86,10 @@ describe('bots end-to-end (memory adapter)', () => {
     expect(greeting.text).toContain('Иван Христофоров');
     expect(greeting.image).toEqual({ name: 'greeting' });
 
-    await bot.press('Создать документ');
+    // Черновик присылается сразу после приветствия — отдельного шага «Создать документ» нет
+    expect(greeting.buttons).toBeUndefined();
     await bot.send('Прошу выделить 5000 руб. на канцтовары до 20.09.2026.');
-    await bot.press('Продолжить');
+    await bot.press('Готово');
     await bot.press('Служебная записка');
     await bot.press('Классический');
 
@@ -96,7 +97,7 @@ describe('bots end-to-end (memory adapter)', () => {
     await bot.waitFor((s) => ['asking_field', 'ready'].includes(s), 8000);
     if (bot.state() === 'asking_field') {
       await bot.send('Директору Иванову И. И.');
-      await bot.press('Пропустить остальные');
+      await bot.press('Пропустить все вопросы');
     }
     await bot.waitFor((s) => s === 'ready');
 
@@ -111,12 +112,28 @@ describe('bots end-to-end (memory adapter)', () => {
     expect(JSON.parse(doc.user_fields)['Адресат']).toBe('Директору Иванову И. И.');
   });
 
+  it('answers a button from an earlier step with the buttons of the current step', async () => {
+    const bot = startBot();
+
+    await bot.send('Прошу выделить ноутбук для нового сотрудника.');
+    await bot.press('Готово');
+    expect(bot.state()).toBe('choose_type');
+
+    // «Показать черновик» остался под сообщением с шага черновика
+    await bot.press('Показать черновик');
+
+    const reply = bot.messages().at(-1);
+    expect(reply.text).toContain('предыдущему шагу');
+    expect(reply.buttons.flat().map((b) => b.label)).toContain('Служебная записка');
+    expect(bot.state()).toBe('choose_type');
+  });
+
   it('keeps the draft and offers a retry when the AI fails (/ai_fail)', async () => {
     const bot = startBot();
 
     await bot.send('Прошу согласовать отпуск с 1 октября.');
     await bot.send('/ai_fail');
-    await bot.press('Продолжить');
+    await bot.press('Готово');
     await bot.press('Докладная записка');
     await bot.press('Классический');
 
@@ -138,13 +155,13 @@ describe('bots end-to-end (memory adapter)', () => {
     const bot = startBot();
 
     await bot.send('Справка о выполнении работ за сентябрь.');
-    await bot.press('Продолжить');
+    await bot.press('Готово');
     await bot.press('Информационная справка');
     bot.adapter.armFileFailure(bot.peer);
     await bot.press('Классический');
 
     await bot.waitFor((s) => s === 'asking_field' || s === 'delivery_failed', 8000);
-    if (bot.state() === 'asking_field') await bot.press('Пропустить остальные');
+    if (bot.state() === 'asking_field') await bot.press('Пропустить все вопросы');
     await bot.waitFor((s) => s === 'delivery_failed');
 
     const before = runtime.db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE kind = 'process'").get().n;
