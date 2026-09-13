@@ -29,7 +29,7 @@ const envSchema = z.object({
 
 
   // AI
-  AI_PROVIDER: z.enum(['openai-compat', 'opencode', 'mock']).default('openai-compat'),
+  AI_PROVIDER: z.enum(['openai', 'opencode', 'mock']).default('opencode'),
 
   // OpenCode CLI (бесплатные модели OpenCode Zen)
   OPENCODE_RUNTIME: z.enum(['local', 'docker', 'podman']).default('local'),
@@ -42,7 +42,6 @@ const envSchema = z.object({
   AI_BASE_URL: z.string().url().default('http://localhost:11434/v1'),
   AI_API_KEY: z.string().default(''),
   AI_MODEL: z.string().default('qwen2.5:7b-instruct'),
-  AI_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.1),
   AI_TIMEOUT_MS: z.coerce.number().positive().default(90000),
   AI_FAULT: z.enum(['off', 'always']).default('off'),
 

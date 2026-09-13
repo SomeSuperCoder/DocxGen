@@ -12,7 +12,7 @@
  *   documentService — document lifecycle
  *   processDraft — AI pipeline (injected for tests)
  *   docTypes — document type catalog (config passed to the AI prompt)
- *   provider — AI provider (openai-compat | opencode | mock)
+ *   provider — AI provider (openai | opencode | mock)
  *   faultManager — simulated AI outage for scenario 6 (/ai_fail)
  *   log — pino-compatible logger
  */

@@ -21,10 +21,11 @@
     "cookie-parser": "^1",
     "docx": "^9",
     "express": "^5",
+    "openai": "^7.15.0",
     "pino": "^9",
     "pino-http": "^10",
-    "zod": "^4",
-    "vk-io": "^4"
+    "vk-io": "^4",
+    "zod": "^4"
   },
   "devDependencies": {
     "jszip": "^3",
