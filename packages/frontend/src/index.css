@@ -165,6 +165,9 @@ a {
   outline: 2px solid hsl(var(--primary));
   outline-offset: 4px;
 }
+.requisites-panel input:focus-visible {
+  outline: none;
+}
 svg {
   flex-shrink: 0;
 }

@@ -19,7 +19,7 @@ export const RequisitesForm = memo(function RequisitesForm({
   // Show loading state when no fields are available
   if (docTypeFields.length === 0) {
     return (
-      <div className="grid grid-cols-1 gap-x-10 gap-y-2 md:grid-cols-2">
+    <div className="requisites-panel grid grid-cols-1 gap-x-10 gap-y-2 md:grid-cols-2">
         <div className="pt-3.5 text-sm text-muted-foreground">
           Загрузка полей…
         </div>
@@ -31,7 +31,7 @@ export const RequisitesForm = memo(function RequisitesForm({
   const visibleFields = docTypeFields.filter((field) => field.kind !== 'auto' && field.kind !== 'registry');
 
   return (
-    <div className="grid grid-cols-1 gap-x-10 gap-y-2 md:grid-cols-2">
+    <div className="requisites-panel grid grid-cols-1 gap-x-10 gap-y-2 md:grid-cols-2">
       {visibleFields.map((field) => {
         const empty = !requisites[field.key];
         const isEditable = field.kind === 'extract' || field.kind === 'derived';
