@@ -80,8 +80,8 @@ async function main() {
     if (!e.AI_API_KEY) { console.log(`${c.red}API key required.${c.reset}`); process.exit(1); }
     e.AI_BASE_URL = await ask(rl, 'Base URL', 'https://api.openai.com/v1');
     e.AI_MODEL = await ask(rl, 'Model', 'gpt-4o');
-    e.OPENCODE_RUNTIME = ''; e.OPENCODE_BIN = ''; e.OPENCODE_IMAGE = '';
-    e.OPENCODE_MODEL = ''; e.OPENCODE_AGENT = ''; e.OPENCODE_MAX_PARALLEL = '';
+    e.OPENCODE_RUNTIME = 'local'; e.OPENCODE_BIN = 'opencode'; e.OPENCODE_IMAGE = 'doc3steps-opencode';
+    e.OPENCODE_MODEL = ''; e.OPENCODE_AGENT = 'doc-editor'; e.OPENCODE_MAX_PARALLEL = '1';
   } else if (provider === 'opencode') {
     console.log(`\n${c.dim}Configure OpenCode CLI:${c.reset}`);
     e.AI_API_KEY = ''; e.AI_BASE_URL = ''; e.AI_MODEL = '';
@@ -92,8 +92,8 @@ async function main() {
     e.OPENCODE_MAX_PARALLEL = await ask(rl, 'Max parallel requests', '1');
   } else {
     e.AI_API_KEY = ''; e.AI_BASE_URL = ''; e.AI_MODEL = '';
-    e.OPENCODE_RUNTIME = ''; e.OPENCODE_BIN = ''; e.OPENCODE_IMAGE = '';
-    e.OPENCODE_MODEL = ''; e.OPENCODE_AGENT = ''; e.OPENCODE_MAX_PARALLEL = '';
+    e.OPENCODE_RUNTIME = 'local'; e.OPENCODE_BIN = 'opencode'; e.OPENCODE_IMAGE = 'doc3steps-opencode';
+    e.OPENCODE_MODEL = ''; e.OPENCODE_AGENT = 'doc-editor'; e.OPENCODE_MAX_PARALLEL = '1';
   }
 
   e.AI_FAULT = (await askYesNo(rl, 'Enable AI fault injection for testing?', false)) ? 'on' : 'off';
