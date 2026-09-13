@@ -30,7 +30,7 @@ DocxGen is an AI-powered Russian business document generator designed for organi
 
 **Key capabilities:**
 - 🤖 AI-powered text correction and field extraction
-- 📋 4 document types × 2 templates = 8 professional layouts
+- 📋 9 document types × 2 templates = 18 professional layouts
 - 🎙️ Russian speech recognition (Vosk)
 - 💬 Multi-channel: Web UI + MAX bot + VK bot
 - ✅ ГОСТ Р 7.0.97-2016 compliance checks
@@ -192,6 +192,11 @@ Cookie-based identity — no login required. User identity is automatic.
 | **Report** | Докладная записка | Report memo to management |
 | **Reference** | Информационная справка | Factual summary for audits/archives |
 | **Letter** | Письмо | Official organizational letter |
+| **Explanatory Note** | Пояснительная записка | Technical explanation or justification |
+| **Order** | Приказ | Executive order or directive |
+| **Protocol** | Протокол | Meeting minutes or resolution record |
+| **Act** | Акт | Completion report or verification record |
+| **Statement** | Заявление | Personal or organizational application |
 
 ### Templates
 
