@@ -14,6 +14,10 @@ export const DOCUMENT_TYPES: Array<{
   { id: 'reference', label: 'Информационная справка', description: 'Справка с фактами' },
   { id: 'letter', label: 'Письмо', description: 'Внешняя корреспонденция' },
   { id: 'explanatory-note', label: 'Пояснительная записка', description: 'Пояснение к проекту документа' },
+  { id: 'order', label: 'Приказ', description: 'Распоряжение руководителя' },
+  { id: 'protocol', label: 'Протокол', description: 'Протокол совещания' },
+  { id: 'act', label: 'Акт', description: 'Акт выполненных работ' },
+  { id: 'statement', label: 'Заявление', description: 'Заявление физического лица' },
 ];
 
 
