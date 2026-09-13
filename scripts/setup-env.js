@@ -32,7 +32,7 @@ function askSecret(rl, q) {
       const k = ch.toString();
       if (k === '\n' || k === '\r') { if (stdin.isTTY) stdin.setRawMode(wasRaw ?? false); stdin.removeListener('data', onData); process.stdout.write('\n'); resolve(val.trim()); }
       else if (k === '\u007F' || k === '\b') { if (val.length > 0) { val = val.slice(0, -1); process.stdout.write('\b \b'); } }
-      else if (k === '\u0003') { if (stdin.isTTY) stdin.setRawMode(wasRaw ?? false); stdin.removeListener('data', onData); console.log(`\n${c.yellow}Aborted.${c.reset}`); process.exit(1); }
+      else if (k === '\u0003') { if (stdin.isTTY) stdin.setRawMode(wasRaw ?? false); stdin.removeListener('data', onData); console.log(`\n${c.yellow}Отменено.${c.reset}`); process.exit(1); }
       else if (k.charCodeAt(0) >= 32) { val += k; process.stdout.write('*'); }
     };
     stdin.on('data', onData);
@@ -40,72 +40,72 @@ function askSecret(rl, q) {
 }
 
 const PROVIDERS = [
-  { key: 'openai', label: 'OpenAI / compatible API (cloud providers)' },
-  { key: 'opencode', label: 'OpenCode CLI (free models, no API key)' },
-  { key: 'mock', label: 'Mock — no AI (for testing only)' },
+  { key: 'openai', label: 'OpenAI / совместимое API (облачные провайдеры)' },
+  { key: 'opencode', label: 'OpenCode CLI (бесплатные модели, без API-ключа)' },
+  { key: 'mock', label: 'Заглушка — без ИИ (только для тестирования)' },
 ];
 
 async function main() {
   console.log(`\n${c.bold}${c.magenta}╔══════════════════════════════════════════╗${c.reset}`);
-  console.log(`${c.bold}${c.magenta}║       DocxGen Environment Setup         ║${c.reset}`);
+  console.log(`${c.bold}${c.magenta}║     Настройка окружения DocxGen         ║${c.reset}`);
   console.log(`${c.bold}${c.magenta}╚══════════════════════════════════════════╝${c.reset}\n`);
-  console.log(`Creates a ${c.bold}.env${c.reset} file. Re-run anytime to update.\n`);
+  console.log(`Создаёт файл ${c.bold}.env${c.reset}. Можно запустить снова для обновления.\n`);
 
   if (fs.existsSync(ENV_PATH)) {
     const rl0 = createRL();
-    const ow = await askYesNo(rl0, 'Found existing .env. Overwrite?', false);
+    const ow = await askYesNo(rl0, 'Найден существующий .env. Перезаписать?', false);
     rl0.close();
-    if (!ow) { console.log(`${c.yellow}Keeping existing .env.${c.reset}`); process.exit(0); }
+    if (!ow) { console.log(`${c.yellow}Оставляю существующий .env.${c.reset}`); process.exit(0); }
   }
 
   const rl = createRL();
   const e = {};
-  e.PORT = await ask(rl, 'Server port', '3000');
-  e.PUBLIC_URL = await ask(rl, 'Public URL', 'http://localhost:3000');
-  e.DATA_DIR = await ask(rl, 'Data directory', './data');
-  e.LOG_LEVEL = await ask(rl, 'Log level (info/debug)', 'info');
-  e.DEBUG_COMMANDS = (await askYesNo(rl, 'Enable debug commands?', true)) ? '1' : '0';
+  e.PORT = await ask(rl, 'Порт сервера', '3000');
+  e.PUBLIC_URL = await ask(rl, 'Публичный URL', 'http://localhost:3000');
+  e.DATA_DIR = await ask(rl, 'Директория данных', './data');
+  e.LOG_LEVEL = await ask(rl, 'Уровень логов (info/debug)', 'info');
+  e.DEBUG_COMMANDS = (await askYesNo(rl, 'Включить отладочные команды?', true)) ? '1' : '0';
 
-  console.log(`\n${c.bold}AI Provider${c.reset}`);
+  console.log(`\n${c.bold}ИИ-провайдер${c.reset}`);
   PROVIDERS.forEach((p, i) => console.log(`  ${c.cyan}${i + 1}${c.reset}) ${p.label}`));
   let choice = '';
-  while (!['1', '2', '3'].includes(choice)) choice = await ask(rl, 'Select (1/2/3)', '2');
+  while (!['1', '2', '3'].includes(choice)) choice = await ask(rl, 'Выберите (1/2/3)', '2');
   const provider = PROVIDERS[parseInt(choice) - 1].key;
   e.AI_PROVIDER = provider;
-  e.AI_TIMEOUT_MS = await ask(rl, 'AI timeout (ms)', '180000');
+  e.AI_TIMEOUT_MS = await ask(rl, 'Тайм-аут ИИ (мс)', '180000');
 
   if (provider === 'openai') {
-    console.log(`\n${c.dim}Configure OpenAI-compatible provider:${c.reset}`);
-    e.AI_API_KEY = await askSecret(rl, 'API Key (required)');
-    if (!e.AI_API_KEY) { console.log(`${c.red}API key required.${c.reset}`); process.exit(1); }
-    e.AI_BASE_URL = await ask(rl, 'Base URL', 'https://api.openai.com/v1');
-    e.AI_MODEL = await ask(rl, 'Model', 'gpt-4o');
+    console.log(`\n${c.dim}Настройка OpenAI-совместимого провайдера:${c.reset}`);
+    e.AI_API_KEY = await askSecret(rl, 'API-ключ (обязательный)');
+    if (!e.AI_API_KEY) { console.log(`${c.red}API-ключ обязателен.${c.reset}`); process.exit(1); }
+    e.AI_BASE_URL = await ask(rl, 'Базовый URL', 'https://api.openai.com/v1');
+    e.AI_MODEL = await ask(rl, 'Модель', 'gpt-4o');
     e.OPENCODE_RUNTIME = 'local'; e.OPENCODE_BIN = 'opencode'; e.OPENCODE_IMAGE = 'doc3steps-opencode';
     e.OPENCODE_MODEL = ''; e.OPENCODE_AGENT = 'doc-editor'; e.OPENCODE_MAX_PARALLEL = '1';
   } else if (provider === 'opencode') {
-    console.log(`\n${c.dim}Configure OpenCode CLI:${c.reset}`);
+    console.log(`\n${c.dim}Настройка OpenCode CLI:${c.reset}`);
     e.AI_API_KEY = ''; e.AI_BASE_URL = ''; e.AI_MODEL = '';
-    e.OPENCODE_RUNTIME = await ask(rl, 'Runtime (local/docker/podman)', 'local');
+    e.OPENCODE_RUNTIME = await ask(rl, 'Среда выполнения (local/docker/podman)', 'local');
     e.OPENCODE_BIN = 'opencode'; e.OPENCODE_IMAGE = 'doc3steps-opencode';
-    e.OPENCODE_MODEL = await ask(rl, 'Model (empty = default)', '');
-    e.OPENCODE_AGENT = await ask(rl, 'Agent', 'doc-editor');
-    e.OPENCODE_MAX_PARALLEL = await ask(rl, 'Max parallel requests', '1');
+    e.OPENCODE_MODEL = await ask(rl, 'Модель (пусто = по умолчанию)', '');
+    e.OPENCODE_AGENT = await ask(rl, 'Агент', 'doc-editor');
+    e.OPENCODE_MAX_PARALLEL = await ask(rl, 'Макс. параллельных запросов', '1');
   } else {
     e.AI_API_KEY = ''; e.AI_BASE_URL = ''; e.AI_MODEL = '';
     e.OPENCODE_RUNTIME = 'local'; e.OPENCODE_BIN = 'opencode'; e.OPENCODE_IMAGE = 'doc3steps-opencode';
     e.OPENCODE_MODEL = ''; e.OPENCODE_AGENT = 'doc-editor'; e.OPENCODE_MAX_PARALLEL = '1';
   }
 
-  e.AI_FAULT = (await askYesNo(rl, 'Enable AI fault injection for testing?', false)) ? 'on' : 'off';
+  e.AI_FAULT = (await askYesNo(rl, 'Включить имитацию сбоев ИИ для тестирования?', false)) ? 'on' : 'off';
 
-  console.log(`\n${c.bold}Integrations (optional)${c.reset}`);
-  e.MAX_ENABLED = (await askYesNo(rl, 'Enable MAX bot?', false)) ? '1' : '0';
-  e.MAX_TOKEN = e.MAX_ENABLED === '1' ? await ask(rl, 'MAX token', '') : '';
+  console.log(`\n${c.bold}Интеграции (необязательно)${c.reset}`);
+  e.MAX_ENABLED = (await askYesNo(rl, 'Включить бот MAX?', false)) ? '1' : '0';
+  e.MAX_TOKEN = e.MAX_ENABLED === '1' ? await ask(rl, 'Токен MAX', '') : '';
   e.MAX_API_URL = 'https://platform-api2.max.ru'; e.MAX_MODE = 'polling';
   e.MAX_WEBHOOK_SECRET = ''; e.MAX_CA_FILE = 'certs/russian_trusted_root_ca.pem';
-  e.VK_ENABLED = (await askYesNo(rl, 'Enable VK bot?', false)) ? '1' : '0';
-  e.VK_GROUP_ID = e.VK_ENABLED === '1' ? await ask(rl, 'VK group ID', '') : '';
-  e.VK_TOKEN = e.VK_ENABLED === '1' ? await askSecret(rl, 'VK token') : '';
+  e.VK_ENABLED = (await askYesNo(rl, 'Включить бот VK?', false)) ? '1' : '0';
+  e.VK_GROUP_ID = e.VK_ENABLED === '1' ? await ask(rl, 'ID группы VK', '') : '';
+  e.VK_TOKEN = e.VK_ENABLED === '1' ? await askSecret(rl, 'Токен VK') : '';
   e.VK_API_VERSION = '5.199'; e.VK_MODE = 'longpoll';
   e.VK_CALLBACK_SECRET = ''; e.VK_CONFIRMATION_CODE = '';
   e.CLEANUP_ENABLED = '1'; e.CLEANUP_INTERVAL_MS = '3600000';
@@ -141,19 +141,19 @@ async function main() {
   ];
   fs.writeFileSync(ENV_PATH, lines.join('\n'), 'utf-8');
 
-  console.log(`\n${c.bold}${c.green}✅ .env created successfully!${c.reset}\n`);
-  console.log(`${c.bold}Configuration summary:${c.reset}`);
-  console.log(`  AI Provider : ${c.cyan}${e.AI_PROVIDER}${c.reset}`);
-  if (e.AI_PROVIDER === 'openai') { console.log(`  Base URL    : ${e.AI_BASE_URL}`); console.log(`  Model       : ${e.AI_MODEL}`); }
-  else if (e.AI_PROVIDER === 'opencode') { console.log(`  Runtime     : ${e.OPENCODE_RUNTIME}`); console.log(`  Agent       : ${e.OPENCODE_AGENT}`); console.log(`  Max parallel: ${e.OPENCODE_MAX_PARALLEL}`); }
-  console.log(`  MAX bot     : ${e.MAX_ENABLED === '1' ? 'enabled' : 'disabled'}`);
-  console.log(`  VK bot      : ${e.VK_ENABLED === '1' ? 'enabled' : 'disabled'}`);
-  console.log(`\n${c.bold}Next steps:${c.reset}`);
-  console.log(`  Run ${c.cyan}pnpm dev${c.reset} to start the server\n`);
+  console.log(`\n${c.bold}${c.green}✅ .env успешно создан!${c.reset}\n`);
+  console.log(`${c.bold}Сводка конфигурации:${c.reset}`);
+  console.log(`  ИИ-провайдер : ${c.cyan}${e.AI_PROVIDER}${c.reset}`);
+  if (e.AI_PROVIDER === 'openai') { console.log(`  Базовый URL  : ${e.AI_BASE_URL}`); console.log(`  Модель       : ${e.AI_MODEL}`); }
+  else if (e.AI_PROVIDER === 'opencode') { console.log(`  Среда        : ${e.OPENCODE_RUNTIME}`); console.log(`  Агент        : ${e.OPENCODE_AGENT}`); console.log(`  Параллельность: ${e.OPENCODE_MAX_PARALLEL}`); }
+  console.log(`  Бот MAX      : ${e.MAX_ENABLED === '1' ? 'включён' : 'выключен'}`);
+  console.log(`  Бот VK       : ${e.VK_ENABLED === '1' ? 'включён' : 'выключен'}`);
+  console.log(`\n${c.bold}Следующие шаги:${c.reset}`);
+  console.log(`  Запустите ${c.cyan}pnpm dev${c.reset} для старта сервера\n`);
 }
 
 main().catch((err) => {
-  if (err.code === 'SIGINT' || err.message === 'readline was closed') { console.log(`\n${c.yellow}Aborted.${c.reset}`); }
-  else { console.error(`${c.red}Error:${c.reset}`, err.message); }
+  if (err.code === 'SIGINT' || err.message === 'readline was closed') { console.log(`\n${c.yellow}Отменено.${c.reset}`); }
+  else { console.error(`${c.red}Ошибка:${c.reset}`, err.message); }
   process.exit(1);
 });
