@@ -1,10 +1,14 @@
 import { Router } from 'express';
+import crypto from 'node:crypto';
+import JSZip from 'jszip';
 import fs from 'node:fs';
 import path from 'node:path';
 import { rateLimiter } from './rateLimiter.js';
 import { apiKeyAuth } from './apiKeyAuth.js';
 import { ownerHeaders } from './ownerHeaders.js';
 import { readMultipartFile } from '../audio/multipart.js';
+import { detectDocumentType, checkGost, directorySearch, normalizeRussianRequisite, DEFAULT_DIRECTORY, formatDirectorySuggestion } from '../features/killer.js';
+import { parseDocxTemplate } from '../features/templateImport.js';
 
 /**
  * REST API router — all document methods delegate to documentService.
@@ -21,8 +25,17 @@ import { readMultipartFile } from '../audio/multipart.js';
  * @returns {Router}
  */
 export function createApiRouter(deps = {}) {
-  const { documentService, docTypes, templates, fileStorage, log, faultManager, debugCommands, audioClient, audioMaxBytes = 25 * 1024 * 1024 } = deps;
+  const { documentService, docTypes, templates, fileStorage, log, faultManager, debugCommands, audioClient, audioMaxBytes = 25 * 1024 * 1024, maxMiniAppUrl } = deps;
   const router = Router();
+
+  // The extension tables are also created for lightweight integrations/tests
+  // that bootstrap the API with the original schema only.
+  deps.db?.exec?.(`
+    CREATE TABLE IF NOT EXISTS organization_templates (id TEXT PRIMARY KEY, owner_platform TEXT NOT NULL, owner_id TEXT NOT NULL, name TEXT NOT NULL, source_filename TEXT, config TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS idx_org_templates_owner ON organization_templates(owner_platform, owner_id);
+    CREATE TABLE IF NOT EXISTS directory_entries (id TEXT PRIMARY KEY, owner_platform TEXT NOT NULL, owner_id TEXT NOT NULL, name TEXT NOT NULL, position TEXT NOT NULL DEFAULT '', department TEXT NOT NULL DEFAULT '', email TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS idx_directory_owner ON directory_entries(owner_platform, owner_id);
+  `);
 
   // Rate limit mutating routes only (POST/PUT/PATCH/DELETE)
   // Use injected rateLimiter if provided (for testing), otherwise create default
@@ -114,10 +127,103 @@ export function createApiRouter(deps = {}) {
     res.json({ docTypes: docTypeList, templates: templateList });
   });
 
+  // ── Product extensions ───────────────────────────────────────────────────
+
+  router.post('/api/detect-type', mutate, (req, res) => {
+    const draft = req.body?.sourceText ?? req.body?.draft ?? '';
+    res.json({ suggestion: detectDocumentType(draft, docTypes?.list?.() || []) });
+  });
+
+  router.get('/api/max/mini-app', (_req, res) => {
+    res.json({
+      url: maxMiniAppUrl || process.env.MAX_MINI_APP_URL || '/#/new?maxApp=1',
+      microphone: 'browser',
+      message: 'Откройте URL как мини-приложение MAX: микрофон передаётся браузеру, а не боту.',
+    });
+  });
+
+  router.get('/api/directory', (req, res) => {
+    const owner = req.owner;
+    const rows = deps.db?.prepare?.('SELECT * FROM directory_entries WHERE owner_platform = ? AND owner_id = ? ORDER BY name').all(owner.platform, owner.id) || [];
+    const entries = rows.length ? rows : DEFAULT_DIRECTORY;
+    res.json({ entries: directorySearch(req.query?.query, entries).map((row) => ({ id: row.id, name: row.name, position: row.position, department: row.department, email: row.email })) });
+  });
+
+  router.get('/api/directory/resolve', (req, res) => {
+    const owner = req.owner;
+    const rows = deps.db?.prepare?.('SELECT * FROM directory_entries WHERE owner_platform = ? AND owner_id = ? ORDER BY name').all(owner.platform, owner.id) || [];
+    const entries = rows.length ? rows : DEFAULT_DIRECTORY;
+    const matches = directorySearch(req.query?.name || req.query?.query, entries);
+    res.json({ matches, suggestion: formatDirectorySuggestion(matches[0]) });
+  });
+
+  router.put('/api/directory', mutate, (req, res) => {
+    const owner = req.owner;
+    if (!deps.db) { res.status(503).json({ error: { code: 'UNAVAILABLE', message: 'Directory storage is unavailable' } }); return; }
+    const name = String(req.body?.name || '').trim();
+    if (!name) { res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'name is required' } }); return; }
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    deps.db?.prepare('INSERT INTO directory_entries (id, owner_platform, owner_id, name, position, department, email, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(id, owner.platform, owner.id, name, String(req.body?.position || ''), String(req.body?.department || ''), req.body?.email ? String(req.body.email) : null, now, now);
+    res.status(201).json({ id, name, position: String(req.body?.position || ''), department: String(req.body?.department || ''), email: req.body?.email || null });
+  });
+
+  router.post('/api/templates/import', mutate, async (req, res) => {
+    const owner = req.owner;
+    const buffer = await readMultipartFile(req, 25 * 1024 * 1024);
+    const rawFilename = String(req.headers['x-filename'] || 'organization-letterhead.docx');
+    let filename = rawFilename;
+    try { filename = decodeURIComponent(rawFilename); } catch { /* keep raw header */ }
+    filename = filename.replace(/[^\wа-яё .-]/gi, '_');
+    let template;
+    try {
+      template = await parseDocxTemplate(buffer, { name: filename.replace(/\.docx$/i, '') });
+    } catch (err) {
+      res.status(400).json({ error: { code: 'TEMPLATE_INVALID', message: `Не удалось разобрать DOCX: ${err.message}` } });
+      return;
+    }
+    const registered = templates?.register ? templates.register(template) : template;
+    if (!deps.db) { res.status(503).json({ error: { code: 'UNAVAILABLE', message: 'Template storage is unavailable' } }); return; }
+    const now = new Date().toISOString();
+    deps.db?.prepare('INSERT OR REPLACE INTO organization_templates (id, owner_platform, owner_id, name, source_filename, config, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(registered.id, owner.platform, owner.id, registered.name, filename, JSON.stringify(registered), now, now);
+    res.status(201).json({ template: registered, message: 'Бланк разобран: шрифт, поля и колонтитулы сохранены как шаблон.' });
+  });
+
   // ── Documents CRUD ────────────────────────────────────────────────────────
 
   // All document routes require documentService — skip if not provided
   if (documentService) {
+
+  router.post('/api/documents/process-batch', mutate, async (req, res) => {
+    const owner = req.owner;
+    const items = Array.isArray(req.body?.documents) ? req.body.documents : [];
+    if (!items.length || items.length > 20) { res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'documents must contain 1–20 drafts' } }); return; }
+    const created = [];
+    for (const item of items) {
+      const doc = documentService.create(owner);
+      documentService.setType(owner, doc.id, item.docType || 'memo');
+      documentService.setTemplate(owner, doc.id, item.templateId || 'classic');
+      if (item.sourceText) documentService.setDraft(owner, doc.id, String(item.sourceText), { mode: 'replace' });
+      const result = documentService.startProcessing(owner, doc.id);
+      created.push({ id: doc.id, jobId: result.job.id, filename: item.filename || null });
+    }
+    res.status(202).json({ count: created.length, documents: created, message: 'Черновики поставлены в общую очередь.' });
+  });
+
+  router.post('/api/documents/batch-archive', mutate, async (req, res) => {
+    const ids = Array.isArray(req.body?.documentIds) ? req.body.documentIds.slice(0, 20) : [];
+    if (!ids.length) { res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'documentIds is required' } }); return; }
+    const archive = new JSZip();
+    for (const id of ids) {
+      const result = await documentService.render(req.owner, id);
+      const buffer = fs.readFileSync(result.file.path);
+      archive.file(result.file.filename, buffer);
+    }
+    const buffer = await archive.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="docxgen-archive.zip"');
+    res.end(buffer);
+  });
 
   router.post('/api/documents', mutate, async (req, res) => {
     const { sourceText, docType, templateId } = req.body || {};
@@ -157,6 +263,21 @@ export function createApiRouter(deps = {}) {
     const owner = req.owner;
     const doc = documentService.get(owner, req.params.id);
     res.json(doc);
+  });
+
+  router.get('/api/documents/:id/versions', async (req, res) => {
+    res.json({ versions: documentService.listVersions ? documentService.listVersions(req.owner, req.params.id) : [] });
+  });
+
+  router.post('/api/documents/:id/versions/:versionId/restore', mutate, async (req, res) => {
+    if (!documentService.restoreVersion) { res.status(501).json({ error: { code: 'UNAVAILABLE', message: 'Version restore is unavailable' } }); return; }
+    res.json(documentService.restoreVersion(req.owner, req.params.id, req.params.versionId));
+  });
+
+  router.get('/api/documents/:id/gost', async (req, res) => {
+    const doc = documentService.get(req.owner, req.params.id);
+    const template = templates?.get?.(doc.templateId)?.template;
+    res.json(checkGost({ docType: doc.docType, template, aiFields: doc.version?.aiFields, userFields: doc.userFields, title: doc.version?.title, body: doc.version?.body }));
   });
 
   router.patch('/api/documents/:id', mutate, async (req, res) => {
@@ -210,7 +331,7 @@ export function createApiRouter(deps = {}) {
 
     // Apply each field from the request body
     for (const [key, value] of Object.entries(fields)) {
-      documentService.setField(owner, id, key, value);
+      documentService.setField(owner, id, key, typeof value === 'string' ? normalizeRussianRequisite(key, value) : value);
     }
 
     const doc = documentService.get(owner, id);

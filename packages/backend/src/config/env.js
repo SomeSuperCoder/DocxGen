@@ -53,6 +53,8 @@ const envSchema = z.object({
   MAX_WEBHOOK_SECRET: z.string().optional(),
   // API MAX работает на сертификате УЦ Минцифры, которого нет в Node.js и Windows (источник — gosuslugi.ru/crt)
   MAX_CA_FILE: z.string().default('certs/russian_trusted_root_ca.pem'),
+  MAX_MINI_APP_URL: z.string().optional(),
+  MAX_MINI_APP_BOT: z.string().optional(),
 
   // VK bot
   VK_ENABLED: flag(false),

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { mergeRequisites } from '../validation/requisites.js';
 import { DomainError } from './errors.js';
+import { normalizeRussianRequisite } from '../features/killer.js';
 
 /**
  * Create the document service — the CENTRAL service for document lifecycle.
@@ -154,6 +155,7 @@ export function createDocumentService({ db, queue, fileStorage, docTypes, templa
         // Requisites extracted by the AI and verified by grounding — the dialog and render need them,
         // otherwise the bot asks the user for values the AI already found.
         aiFields,
+        sourceQuotes: Object.fromEntries(Object.entries(aiFields).map(([key, value]) => [key, value?.quote || null])),
         changes: JSON.parse(version.changes || '[]'),
         warnings: JSON.parse(version.warnings || '[]'),
         // A version is stale when the draft OR the document type changed after processing.
@@ -368,7 +370,7 @@ export function createDocumentService({ db, queue, fileStorage, docTypes, templa
 
       const fields = JSON.parse(doc.user_fields || '{}');
       // Truncate to 300 chars
-      fields[key] = value !== null ? String(value).slice(0, 300) : null;
+      fields[key] = value !== null ? normalizeRussianRequisite(key, String(value)).slice(0, 300) : null;
 
       updateDoc.run({
         id, docType: doc.doc_type, templateId: doc.template_id,
@@ -572,6 +574,49 @@ export function createDocumentService({ db, queue, fileStorage, docTypes, templa
       const doc = getDocByOwner.get(id, owner.platform, owner.id);
       ensureOwner(doc, owner);
       return toView(doc);
+    },
+
+    /** List immutable processing versions for the history panel. */
+    listVersions(owner, id) {
+      const doc = getDocByOwner.get(id, owner.platform, owner.id);
+      ensureOwner(doc, owner);
+      return db.prepare('SELECT * FROM versions WHERE document_id = ? ORDER BY created_at DESC').all(id).map((version) => ({
+        id: version.id,
+        documentId: version.document_id,
+        draftVersion: version.draft_version,
+        docType: version.doc_type,
+        kind: version.kind,
+        title: version.title,
+        body: JSON.parse(version.body || '[]'),
+        aiFields: JSON.parse(version.ai_fields || '{}'),
+        changes: JSON.parse(version.changes || '[]'),
+        warnings: JSON.parse(version.warnings || '[]'),
+        createdAt: version.created_at,
+        current: doc.current_version_id === version.id,
+      }));
+    },
+
+    /** Restore a prior version as a new immutable version so rollback is auditable. */
+    restoreVersion(owner, id, versionId) {
+      const doc = getDocByOwner.get(id, owner.platform, owner.id);
+      ensureOwner(doc, owner);
+      const previous = getVersion.get(versionId);
+      if (!previous || previous.document_id !== id) throw new DomainError('NOT_FOUND', 'Version not found', 404);
+      const restoredId = crypto.randomUUID();
+      insertVersion.run({
+        id: restoredId, documentId: id, draftVersion: doc.draft_version,
+        docType: doc.doc_type, kind: 'restore', title: previous.title,
+        body: previous.body, aiFields: previous.ai_fields,
+        changes: JSON.stringify([`Восстановлена версия от ${previous.created_at}`]),
+        warnings: previous.warnings || '[]', now: now(),
+      });
+      updateDoc.run({
+        id, docType: doc.doc_type, templateId: doc.template_id,
+        sourceText: doc.source_text, draftVersion: doc.draft_version,
+        userFields: doc.user_fields, status: 'processed',
+        currentVersionId: restoredId, lastError: null, now: now(),
+      });
+      return toView(getDoc.get(id));
     },
 
     /**

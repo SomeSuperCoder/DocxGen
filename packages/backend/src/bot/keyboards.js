@@ -19,7 +19,19 @@ import { encode } from './payload.js';
  * @returns {import('./flow.js').Button[][]}
  */
 export function mainKeyboard(stateVersion = 0) {
-  return [[{ label: 'Создать документ', action: encode({ a: 'new', r: stateVersion }) }]];
+  return [
+    [{ label: 'Создать документ', action: encode({ a: 'new', r: stateVersion }) }],
+    [{ label: 'Мои документы', action: encode({ a: 'documents', r: stateVersion }) }],
+  ];
+}
+
+/** Кнопка запуска мини-приложения MAX. Для незарегистрированного локального URL используется ссылка. */
+export function miniAppKeyboard({ url, botUsername } = {}) {
+  if (!url) return undefined;
+  return [[{
+    label: '🚀 Открыть мини‑приложение',
+    ...(botUsername ? { type: 'open_app', webApp: botUsername } : { type: 'link', url }),
+  }]];
 }
 
 /**

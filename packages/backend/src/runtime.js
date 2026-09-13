@@ -62,6 +62,12 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
 
   const docTypes = loadDocTypes(path.join(ROOT, 'config/doc-types'), logger);
   const templates = loadTemplates(path.join(ROOT, 'config/templates'), logger);
+  // Restore user-imported DOCX bланки saved by the API after a restart.
+  try {
+    for (const row of db.prepare('SELECT config FROM organization_templates').all()) {
+      try { templates.register?.(JSON.parse(row.config)); } catch (err) { logger.warn({ error: err.message }, 'imported template skipped'); }
+    }
+  } catch { /* a lightweight test database may predate migration 002 */ }
   const queue = createQueue(db);
   const fileStorage = createFileStorage(dataDir);
   const documentService = createDocumentService({ db, queue, fileStorage, docTypes, templates, renderDocx, log: logger });
@@ -89,7 +95,8 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
   const audioService = { serviceUrl: `http://127.0.0.1:${config.AUDIO_SERVICE_PORT ?? 3005}`, apiKey: config.API_KEY };
   const audioClient = createAudioClient(audioService);
   const transcribeAudio = createBotTranscriber({ ...audioService, maxBytes: config.AUDIO_MAX_BYTES });
-  const flow = createFlow({ docServiceClient, docTypes, templates, faultManager, debugCommands: config.DEBUG_COMMANDS, log: logger, transcribeAudio });
+  const miniAppUrl = config.MAX_MINI_APP_URL || (config.PUBLIC_URL ? `${config.PUBLIC_URL}/#/new?maxApp=1` : null);
+  const flow = createFlow({ docServiceClient, docTypes, templates, faultManager, debugCommands: config.DEBUG_COMMANDS, log: logger, transcribeAudio, miniAppUrl, miniAppBot: config.MAX_MINI_APP_BOT });
   const adapters = new Map();
   const dispatcher = createDispatcher({ db, flow, adapters, log: logger });
   const notifier = createNotifier({ dispatcher, flow, adapters, docServiceClient, log: logger, pollIntervalMs: config.DOCUMENT_POLL_INTERVAL_MS });
@@ -160,7 +167,7 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
     }
   }
 
-  const app = createApp({ log: logger, deps: { documentService, docTypes, templates, fileStorage, db, log: logger, apiKey: config.API_KEY, audioClient, audioMaxBytes: config.AUDIO_MAX_BYTES, routers } });
+  const app = createApp({ log: logger, deps: { documentService, docTypes, templates, fileStorage, db, log: logger, apiKey: config.API_KEY, audioClient, audioMaxBytes: config.AUDIO_MAX_BYTES, maxMiniAppUrl: miniAppUrl, routers } });
 
   for (const poller of pollers) void poller.start();
   // Events accepted before a restart are processed once the adapters are registered.

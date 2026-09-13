@@ -26,6 +26,7 @@ interface DraftSectionProps {
   disabled: boolean;
   /** Текст, распознанный из записи или аудиофайла. */
   onAudioTranscribed: (text: string) => void;
+  templates?: Array<{ id: string; name: string; description?: string }>;
 }
 export const DraftSection = memo(function DraftSection({
   text,
@@ -37,6 +38,7 @@ export const DraftSection = memo(function DraftSection({
   onTemplateChange,
   disabled,
   onAudioTranscribed,
+  templates,
 }: DraftSectionProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const voice = useVoiceInput(onAudioTranscribed);
@@ -179,14 +181,16 @@ export const DraftSection = memo(function DraftSection({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-               <SelectItem value="classic">Классический корпоративный</SelectItem>
-               <SelectItem value="modern">Современный регламентный</SelectItem>
+              {(templates?.length ? templates : [
+                { id: 'classic', name: 'Классический корпоративный', description: 'Times New Roman, 14 пт.' },
+                { id: 'modern', name: 'Современный регламентный', description: 'Arial, 12 пт.' },
+              ]).map((template) => <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <p className="setting-description">
-            {templateId === "classic"
+            {templates?.find((template) => template.id === templateId)?.description || (templateId === "classic"
               ? "Times New Roman, 14 пт. Полуторный интервал."
-              : "Arial, 12 пт. Компактное оформление."}
+              : "Arial, 12 пт. Компактное оформление.")}
           </p>
         </div>
       </div>

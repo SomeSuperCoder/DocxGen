@@ -10,7 +10,10 @@ import { useCallback, useEffect, useState } from 'react';
  */
 export type Route = 'landing' | 'app';
 
-const toRoute = (hash: string): Route => (hash.replace(/^#/, '') === '/new' ? 'app' : 'landing');
+const toRoute = (hash: string): Route => {
+  const value = hash.replace(/^#/, '');
+  return value === '/new' || value.startsWith('/new?') ? 'app' : 'landing';
+};
 
 export function useHashRoute() {
   const [route, setRoute] = useState<Route>(() => toRoute(window.location.hash));

@@ -39,7 +39,7 @@ function chars(count) {
 /**
  * How a draft can be sent. Voice messages are mentioned only where the platform delivers them
  * to the bot: the MAX Bot API sends a voice message without its content (see adapters/max/normalize.js).
- * @typedef {{ voice?: boolean }} InputOptions
+ * @typedef {{ voice?: boolean, miniAppUrl?: string }} InputOptions
  */
 
 /** «текстом или голосовым» / «текстом». */
@@ -79,6 +79,17 @@ export function greeting(profile = null, options = {}) {
  */
 export function pressCreate(options = {}) {
   return `👇 Пришлите черновик — ${byText(options)}. Из него я и сделаю документ.`;
+}
+
+/** Compact history for the bot menu. */
+export function myDocuments(documents = []) {
+  if (!documents.length) return '📚 <b>Мои документы</b>\n\nПока нет сохранённых документов.';
+  const rows = documents.slice(0, 10).map((doc, index) => {
+    const title = doc.version?.title || doc.sourceText?.split(/\s+/).slice(0, 7).join(' ') || 'Черновик';
+    const status = doc.status === 'processed' ? 'готов' : doc.status === 'processing' ? 'обрабатывается' : 'черновик';
+    return `${index + 1}. <b>${esc(title)}</b> — ${esc(status)}`;
+  });
+  return ['📚 <b>Мои документы</b>', '', ...rows, '', 'Чтобы создать новый, нажмите «Создать документ».'].join('\n');
 }
 
 // ── Draft collection ─────────────────────────────────────────────────────────
@@ -420,11 +431,13 @@ export function help(options = {}) {
     '',
     voice
       ? '🎙️ Голосовые распознаю и покажу, что понял, — текст потом исправит ИИ.'
-      : '🎙️ Голосовые сообщения MAX пока не передаёт ботам. Надиктовать черновик можно на сайте или в боте ВКонтакте.',
+      : '🎙️ Голосовые сообщения MAX не передаёт ботам. Надиктовать черновик можно на сайте или в мини‑приложении DocxGen внутри MAX — там микрофон работает через браузер.',
+    options.miniAppUrl ? `🚀 <b>Открыть мини‑приложение:</b> ${esc(options.miniAppUrl)}` : '',
     '',
     '<b>Команды</b>',
     '/start — начать заново',
     '/new — новый документ',
+    '/documents — мои документы и версии',
     '/help — эта справка',
   ].join('\n');
 }
