@@ -3,7 +3,7 @@
   "name": "Информационная справка",
   "hint": "Констатация фактов за период: для отчёта, проверки, архива",
   "docTitle": "СПРАВКА",
-  "layout": ["orgHeader", "docTitle", "dateNumber", "title", "body", "signature"],
+  "layout": ["orgHeader", "docTitle", "dateNumber", "addressee", "title", "body", "signature"],
   "structureHint": "Констатирующее изложение фактов за период, без просьб.",
   "fields": [
     { "key": "Тема", "label": "Тема", "kind": "derived", "required": true },

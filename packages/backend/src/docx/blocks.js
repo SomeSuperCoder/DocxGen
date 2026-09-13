@@ -61,6 +61,18 @@ function orgHeader(model) {
   const runs = [];
   runs.push(new TextRun({ text: t.organization.name, bold: cfg.bold }));
 
+  // ГОСТ requisite 06: наименование структурного подразделения (if present)
+  const subdivision = model.values['Наименование подразделения']?.value;
+  if (subdivision) {
+    runs.push(new TextRun({ text: `\n${subdivision}`, bold: cfg.bold }));
+  }
+
+  // ГОСТ requisite 07: наименование должности лица-автора (if present)
+  const position = model.values['Должность автора']?.value;
+  if (position) {
+    runs.push(new TextRun({ text: `\n${position}`, bold: cfg.bold }));
+  }
+
   // ГОСТ: render ИНН/КПП/ОГРН if any are present in the organization object
   const inn = t.organization.inn;
   const kpp = t.organization.kpp;

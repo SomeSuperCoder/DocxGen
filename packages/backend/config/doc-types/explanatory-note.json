@@ -3,7 +3,7 @@
   "name": "Пояснительная записка",
   "hint": "Пояснение к проекту, отчёту или документу: описание цели, методов, результатов",
   "docTitle": "ПОЯСНИТЕЛЬНАЯ ЗАПИСКА",
-  "layout": ["orgHeader", "docTitle", "title", "body", "signature"],
+  "layout": ["orgHeader", "docTitle", "dateNumber", "addressee", "title", "body", "signature"],
   "structureHint": "Цель документа → описание содержания → результаты или выводы. Каждый раздел — отдельный абзац.",
   "fields": [
     { "key": "Адресат", "label": "Адресат", "kind": "extract", "required": true,

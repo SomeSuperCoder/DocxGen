@@ -3,7 +3,7 @@
   "name": "Служебная записка",
   "hint": "Обращение между подразделениями: просьба, предложение, информация",
   "docTitle": "СЛУЖЕБНАЯ ЗАПИСКА",
-  "layout": ["orgHeader", "addressee", "docTitle", "dateNumber", "approvalBlock", "agreementBlock", "title", "body", "attachmentBlock", "signature"],
+  "layout": ["orgHeader", "docTitle", "dateNumber", "addressee", "approvalBlock", "agreementBlock", "title", "body", "attachmentBlock", "signature"],
   "structureHint": "Изложи суть вопроса, затем обоснование, затем просьбу или предложение. Каждая мысль — отдельный абзац.",
   "fields": [
     { "key": "Адресат", "label": "Адресат", "kind": "extract", "required": true,

@@ -57,8 +57,8 @@ describe('DOCX generation — modern template', () => {
     const buffer = await renderDocx(buildModel({ docTypeId: 'memo', templateId: 'modern' }));
     const zip = await JSZip.loadAsync(buffer);
     const docXml = await zip.file('word/document.xml').async('string');
-    // 15mm=850, 15mm=850, 15mm=850, 25mm=1417
-    expect(docXml).toContain('<w:pgMar w:top="850" w:right="850" w:bottom="850" w:left="1417"');
+    // 20mm=1134, 15mm=850, 20mm=1134, 25mm=1417
+    expect(docXml).toContain('<w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1417"');
     const stylesXml = await zip.file('word/styles.xml').async('string');
     expect(stylesXml).toContain('w:ascii="Arial"');
     // 12pt = 24 half-points
@@ -375,13 +375,14 @@ describe('DOCX generation — header behavior', () => {
     expect(docXml).toContain('<w:titlePg/>');
   });
 
-  it('modern: header contains org name, no page number', async () => {
+  it('modern: header has centered page number, no org name', async () => {
     const buffer = await renderDocx(buildModel({ docTypeId: 'memo', templateId: 'modern' }));
     const zip = await JSZip.loadAsync(buffer);
     const headerFile = Object.keys(zip.files).find((f) => f.startsWith('word/header'));
     const headerXml = await zip.file(headerFile).async('string');
+    // Modern header.pageNumber = 'center', so PAGE field is in header
+    expect(headerXml).toContain('PAGE');
+    // Org name is NOT in header — it renders in body via orgHeader block
     expect(headerXml).not.toContain('ООО «Пример»');
-    // Modern header.pageNumber = 'none', so no PageNumber in header
-    expect(headerXml).not.toContain('PAGE');
   });
 });

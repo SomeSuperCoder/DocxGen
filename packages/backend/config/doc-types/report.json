@@ -3,7 +3,7 @@
   "name": "Докладная записка",
   "hint": "Доведение информации до руководства: факты, выводы, предложения",
   "docTitle": "ДОКЛАДНАЯ ЗАПИСКА",
-  "layout": ["orgHeader", "addressee", "docTitle", "dateNumber", "approvalBlock", "agreementBlock", "title", "body", "attachmentBlock", "signature"],
+  "layout": ["orgHeader", "docTitle", "dateNumber", "addressee", "approvalBlock", "agreementBlock", "title", "body", "attachmentBlock", "signature"],
   "structureHint": "Факты → причины → выводы и предложения. Каждая мысль — отдельный абзац.",
   "fields": [
     { "key": "Адресат", "label": "Адресат", "kind": "extract", "required": true,

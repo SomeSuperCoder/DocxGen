@@ -25,7 +25,7 @@ async function getDocXml(docTypeId, templateId, values = {}, title = null, body 
 }
 
 // ── Test Group 1: Block Presence Matrix ──────────────────────────────────────
-// For each of the 8 template×docType combinations, verify ALL expected blocks
+// For each of the 10 template×docType combinations, verify ALL expected blocks
 // are present and all unexpected blocks are absent.
 
 describe('Test Group 1 — Block Presence Matrix', () => {
@@ -159,16 +159,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
       expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
     });
 
-    it('NO addressee block', async () => {
+    it('renders addressee block', async () => {
       const xml = await getDocXml('reference', 'classic', { 'Адресат': 'В отдел кадров' });
-      // Reference layout does NOT include addressee
-      // The text might appear via placeholder but not as an addressee block
-      // We check that there's no addressee-style right-aligned table with this text
-      // Actually, reference layout has NO addressee call — the field value won't render
-      // unless it's placed elsewhere. Let's verify the layout array.
-      // From blocks.js: classicReferenceLayout = [orgHeader, docTitle, dateNumber, title, body, signature]
-      // No addressee → the value "В отдел кадров" should NOT appear in XML
-      expect(xml).not.toContain('В отдел кадров');
+      expect(xml).toContain('В отдел кадров');
     });
 
     it('renders docTitle', async () => {
@@ -280,11 +273,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Modern Memo ───────────────────────────────────────────────────────────
 
   describe('modern + memo', () => {
-    it('NO orgHeader in body', async () => {
+    it('renders orgHeader in body', async () => {
       const xml = await getDocXml('memo', 'modern');
-      // Modern orgHeader.show = false → organization NOT in body
-      // Organization is in header, not body
-      expect(xml).not.toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
     });
 
     it('renders addressee as plain paragraphs (no table)', async () => {
@@ -342,9 +333,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Modern Report ─────────────────────────────────────────────────────────
 
   describe('modern + report', () => {
-    it('NO orgHeader in body', async () => {
+    it('renders orgHeader in body', async () => {
       const xml = await getDocXml('report', 'modern');
-      expect(xml).not.toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
     });
 
     it('renders addressee as plain paragraphs (no table)', async () => {
@@ -397,16 +388,14 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Modern Reference ──────────────────────────────────────────────────────
 
   describe('modern + reference', () => {
-    it('NO orgHeader in body', async () => {
+    it('renders orgHeader in body', async () => {
       const xml = await getDocXml('reference', 'modern');
-      expect(xml).not.toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
     });
 
-    it('NO addressee block', async () => {
-      const xml = await getDocXml('reference', 'modern', { 'Адресат': 'В отдел' });
-      // modernReferenceLayout = [docTitle, dateNumber, title, body, signature]
-      // No addressee → value should not appear
-      expect(xml).not.toContain('В отдел');
+    it('renders addressee block', async () => {
+      const xml = await getDocXml('reference', 'modern', { 'Адресат': 'В отдел кадров' });
+      expect(xml).toContain('В отдел кадров');
     });
 
     it('renders docTitle', async () => {
@@ -453,9 +442,9 @@ describe('Test Group 1 — Block Presence Matrix', () => {
   // ── Modern Letter ─────────────────────────────────────────────────────────
 
   describe('modern + letter', () => {
-    it('NO orgHeader in body', async () => {
+    it('renders orgHeader in body', async () => {
       const xml = await getDocXml('letter', 'modern');
-      expect(xml).not.toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
     });
 
     it('renders addressee (3 paragraphs for letter)', async () => {
@@ -663,11 +652,9 @@ describe('Test Group 2 — Field Rendering Verification', () => {
       expect(xml).toContain('Сидоров П. П.');
     });
 
-    it('Адресат (optional) — NOT rendered by reference layout', async () => {
+    it('Адресат (optional) — renders in addressee block', async () => {
       const xml = await getDocXml('reference', 'classic', { 'Адресат': 'В отдел кадров' });
-      // Reference layout: [orgHeader, docTitle, dateNumber, title, body, signature]
-      // NO addressee block → Адресат has no rendering place
-      expect(xml).not.toContain('В отдел кадров');
+      expect(xml).toContain('В отдел кадров');
     });
 
     it('Период (optional) — NOT rendered by reference layout', async () => {
@@ -836,9 +823,9 @@ describe('Test Group 3 — ГОСТ Formatting Elements', () => {
   });
 
   describe('modern template ГОСТ', () => {
-    it('NO orgHeader in body (org is in page header)', async () => {
+    it('renders orgHeader in body', async () => {
       const xml = await getDocXml('memo', 'modern');
-      expect(xml).not.toContain('г. Москва, ул. Примерная, д. 1');
+      expect(xml).toContain('г. Москва, ул. Примерная, д. 1');
     });
 
     it('addressee as plain paragraphs (no table)', async () => {
@@ -1023,11 +1010,11 @@ describe('Test Group 5 — Complete Field Coverage', () => {
       'Номер': 'dateNumber',
     },
     reference: {
+      'Адресат': 'addressee',
       'Тема': 'title',
       'Дата': 'dateNumber',
       'Должность автора': 'signature',
       'ФИО автора': 'signature',
-      // 'Адресат' → NO rendering place (reference layout has no addressee block)
       // 'Период' → NO rendering place (no block renders this field)
     },
     letter: {
@@ -1046,14 +1033,14 @@ describe('Test Group 5 — Complete Field Coverage', () => {
 
   // Layout block sequences (from blocks.js)
   const layoutBlocks = {
-    'classic:memo': ['orgHeader', 'addressee', 'docTitle', 'dateNumber', 'title', 'body', 'signature'],
-    'classic:report': ['orgHeader', 'addressee', 'docTitle', 'dateNumber', 'title', 'body', 'signature'],
-    'classic:reference': ['orgHeader', 'docTitle', 'dateNumber', 'title', 'body', 'signature'],
-    'classic:letter': ['orgHeader', 'dateNumber', 'addressee', 'title', 'salutation', 'body', 'signature', 'executor'],
-    'modern:memo': ['addressee', 'docTitle', 'dateNumber', 'title', 'body', 'signature'],
-    'modern:report': ['addressee', 'docTitle', 'dateNumber', 'title', 'body', 'signature'],
-    'modern:reference': ['docTitle', 'dateNumber', 'title', 'body', 'signature'],
-    'modern:letter': ['dateNumber', 'addressee', 'title', 'salutation', 'body', 'signature', 'executor'],
+    'classic:memo': ['orgHeader', 'docTitle', 'dateNumber', 'addressee', 'approvalBlock', 'agreementBlock', 'title', 'body', 'attachmentBlock', 'signature'],
+    'classic:report': ['orgHeader', 'docTitle', 'dateNumber', 'addressee', 'approvalBlock', 'agreementBlock', 'title', 'body', 'attachmentBlock', 'signature'],
+    'classic:reference': ['orgHeader', 'docTitle', 'dateNumber', 'addressee', 'title', 'body', 'signature'],
+    'classic:letter': ['orgHeader', 'dateNumber', 'addressee', 'title', 'salutation', 'body', 'signature', 'copyBlock', 'executor'],
+    'modern:memo': ['orgHeader', 'docTitle', 'dateNumber', 'addressee', 'approvalBlock', 'agreementBlock', 'title', 'body', 'attachmentBlock', 'signature'],
+    'modern:report': ['orgHeader', 'docTitle', 'dateNumber', 'addressee', 'approvalBlock', 'agreementBlock', 'title', 'body', 'attachmentBlock', 'signature'],
+    'modern:reference': ['orgHeader', 'docTitle', 'dateNumber', 'addressee', 'title', 'body', 'signature'],
+    'modern:letter': ['orgHeader', 'dateNumber', 'addressee', 'title', 'salutation', 'body', 'signature', 'copyBlock', 'executor'],
   };
 
   for (const dtId of ['memo', 'report', 'reference', 'letter']) {
@@ -1077,7 +1064,10 @@ describe('Test Group 5 — Complete Field Coverage', () => {
 
           // Fields that are expected to have no rendering place
           const knownUnrendered = {
-            reference: ['Адресат', 'Период'],
+            reference: ['Период'],       // Адресат now renders in addressee block
+            memo: ['Подразделение автора'], // In memo fields but no layout block renders it
+            report: ['Подразделение автора'], // In report fields but no layout block renders it
+            letter: ['Справочные данные'],  // In letter fields but no layout block renders it
           };
 
           const unexpected = unrendered.filter((f) => {
@@ -1097,7 +1087,7 @@ describe('Test Group 5 — Complete Field Coverage', () => {
 
         it('all layout blocks exist in the block registry', () => {
           const blocks = layoutBlocks[`${tplId}:${dtId}`];
-          const registry = ['orgHeader', 'addressee', 'docTitle', 'dateNumber', 'title', 'salutation', 'body', 'signature', 'executor'];
+          const registry = ['orgHeader', 'addressee', 'docTitle', 'dateNumber', 'title', 'salutation', 'body', 'signature', 'executor', 'approvalBlock', 'agreementBlock', 'attachmentBlock', 'copyBlock'];
           for (const block of blocks) {
             expect(registry).toContain(block);
           }
@@ -1108,9 +1098,9 @@ describe('Test Group 5 — Complete Field Coverage', () => {
 
   // Explicit tests for fields with known gaps
   describe('known rendering gaps', () => {
-    it('reference: Адресат has no rendering block — flagged', async () => {
+    it('reference: Адресат renders in addressee block', async () => {
       const xml = await getDocXml('reference', 'classic', { 'Адресат': 'В отдел кадров' });
-      expect(xml).not.toContain('В отдел кадров');
+      expect(xml).toContain('В отдел кадров');
     });
 
     it('reference: Период has no rendering block — flagged', async () => {
@@ -1127,10 +1117,10 @@ describe('Test Group 5 — Complete Field Coverage', () => {
   });
 });
 
-// ── Test Group 6: All 8 Combinations Produce Valid DOCX ─────────────────────
+// ── Test Group 6: All 10 Combinations Produce Valid DOCX ─────────────────────
 // Smoke test: every combination produces a parseable, non-empty DOCX.
 
-describe('Test Group 6 — All 8 Combinations Produce Valid DOCX', () => {
+describe('Test Group 6 — All 10 Combinations Produce Valid DOCX', () => {
   const combinations = [
     ['memo', 'classic'],
     ['memo', 'modern'],
@@ -1140,6 +1130,8 @@ describe('Test Group 6 — All 8 Combinations Produce Valid DOCX', () => {
     ['reference', 'modern'],
     ['letter', 'classic'],
     ['letter', 'modern'],
+    ['explanatory-note', 'classic'],
+    ['explanatory-note', 'modern'],
   ];
 
   for (const [dtId, tplId] of combinations) {

@@ -10,7 +10,7 @@
   "header": { "pageNumber": "center", "firstPage": false, "text": null },
   "footer": { "text": null, "pageNumber": "nOfM" },
   "blocks": {
-    "orgHeader":  { "show": false, "align": "center", "bold": true },
+    "orgHeader":  { "show": true, "align": "center", "bold": true },
     "addressee":  { "position": "left", "widthPercent": 100 },
     "docTitle":   { "align": "center", "bold": true },
     "dateNumber": { "layout": "stack" },
