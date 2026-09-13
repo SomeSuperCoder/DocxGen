@@ -191,6 +191,27 @@ describe('REST API', () => {
     if (appRateLimiter.reset) appRateLimiter.reset();
   });
 
+  // ── Document type detection ───────────────────────────────────────────────
+
+  describe('POST /api/detect-type', () => {
+    it('asks the AI provider and returns its suggestion', async () => {
+      const aiProvider = { name: 'test', complete: async () => '{"typeId":"report","confidence":0.8,"evidence":["докладываю"]}' };
+      const aiApp = createApp({
+        log: createMockLogger(),
+        deps: { documentService, docTypes: createMockDocTypes(), templates: createMockTemplates(), fileStorage, db, aiProvider, rateLimiter: () => appRateLimiter },
+      });
+      const res = await request(aiApp).post('/api/detect-type').send({ sourceText: 'Докладываю о срыве поставки' });
+      expect(res.status).toBe(200);
+      expect(res.body.suggestion).toMatchObject({ typeId: 'report', confidence: 0.8, source: 'ai', evidence: ['докладываю'] });
+    });
+
+    it('answers with the keyword rules when no AI provider is configured', async () => {
+      const res = await request(app).post('/api/detect-type').send({ sourceText: 'Докладываю о срыве поставки' });
+      expect(res.status).toBe(200);
+      expect(res.body.suggestion.source).toBe('rules');
+    });
+  });
+
   // ── Health ────────────────────────────────────────────────────────────────
 
   describe('GET /health', () => {

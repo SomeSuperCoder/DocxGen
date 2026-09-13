@@ -6,8 +6,9 @@ import path from 'node:path';
 import { rateLimiter } from './rateLimiter.js';
 import { apiKeyAuth } from './apiKeyAuth.js';
 import { ownerHeaders } from './ownerHeaders.js';
+import { detectTypeWithAi } from '../ai/detectType.js';
 import { readMultipartFile } from '../audio/multipart.js';
-import { detectDocumentType, checkGost, directorySearch, normalizeRussianRequisite, DEFAULT_DIRECTORY, formatDirectorySuggestion } from '../features/killer.js';
+import { checkGost, directorySearch, normalizeRussianRequisite, DEFAULT_DIRECTORY, formatDirectorySuggestion } from '../features/killer.js';
 import { parseDocxTemplate } from '../features/templateImport.js';
 
 /**
@@ -25,7 +26,7 @@ import { parseDocxTemplate } from '../features/templateImport.js';
  * @returns {Router}
  */
 export function createApiRouter(deps = {}) {
-  const { documentService, docTypes, templates, fileStorage, log, faultManager, debugCommands, audioClient, audioMaxBytes = 25 * 1024 * 1024, maxMiniAppUrl } = deps;
+  const { documentService, docTypes, templates, fileStorage, log, faultManager, debugCommands, audioClient, audioMaxBytes = 25 * 1024 * 1024, maxMiniAppUrl, aiProvider } = deps;
   const router = Router();
 
   // The extension tables are also created for lightweight integrations/tests
@@ -129,9 +130,11 @@ export function createApiRouter(deps = {}) {
 
   // ── Product extensions ───────────────────────────────────────────────────
 
-  router.post('/api/detect-type', mutate, (req, res) => {
+  router.post('/api/detect-type', mutate, async (req, res) => {
     const draft = req.body?.sourceText ?? req.body?.draft ?? '';
-    res.json({ suggestion: detectDocumentType(draft, docTypes?.list?.() || []) });
+    // The configured AI provider (OpenAI / OpenCode) picks the type; keyword rules are the fallback
+    const suggestion = await detectTypeWithAi({ draft, docTypes: docTypes?.list?.() || [], provider: aiProvider, log });
+    res.json({ suggestion });
   });
 
   router.get('/api/max/mini-app', (_req, res) => {

@@ -167,7 +167,7 @@ export function createRuntime(config = env, { db: passedDb, log: logger = log } 
     }
   }
 
-  const app = createApp({ log: logger, deps: { documentService, docTypes, templates, fileStorage, db, log: logger, apiKey: config.API_KEY, audioClient, audioMaxBytes: config.AUDIO_MAX_BYTES, maxMiniAppUrl: miniAppUrl, routers } });
+  const app = createApp({ log: logger, deps: { documentService, docTypes, templates, fileStorage, db, log: logger, aiProvider: provider, apiKey: config.API_KEY, audioClient, audioMaxBytes: config.AUDIO_MAX_BYTES, maxMiniAppUrl: miniAppUrl, routers } });
 
   for (const poller of pollers) void poller.start();
   // Events accepted before a restart are processed once the adapters are registered.
