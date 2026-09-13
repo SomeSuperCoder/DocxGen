@@ -12,7 +12,8 @@
     "eval": "pnpm --filter @docxgen/backend eval",
     "opencode:check": "pnpm --filter @docxgen/backend opencode:check",
     "max:subscribe": "pnpm --filter @docxgen/backend max:subscribe",
-    "setup:env": "node scripts/setup-env.js"
+    "setup:env": "node scripts/setup-env.js",
+    "setup:audio": "npm --prefix packages/backend run setup:audio"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
