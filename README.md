@@ -1,5 +1,7 @@
 <div align="center">
 
+🇺🇦 [Русский](README.ru.md) | English
+
 # 📄 DocxGen
 
 **AI-powered Russian business document generator**
@@ -12,6 +14,7 @@ Generate ГОСТ-compliant DOCX documents from text drafts with AI-powered corr
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6-blue.svg)](https://www.typescriptlang.org/)
 [![React 19](https://img.shields.io/badge/React-19-cyan.svg)](https://react.dev/)
 [![Express 5](https://img.shields.io/badge/Express-5-red.svg)](https://expressjs.com/)
+[![Tests](https://img.shields.io/badge/tests-737-brightgreen.svg)](#-quick-start)
 
 </div>
 
